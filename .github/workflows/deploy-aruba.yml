@@ -55,7 +55,7 @@ jobs:
           server: ftp.cancello-automatico.eu
           username: "18131912@aruba.it"
           password: ${{ secrets.FTP_PASSWORD }}
-          server-dir: ./Crm/
+          server-dir: /www.cancello-automatico.eu/Crm/
           local-dir: release-aruba/
           exclude: |
             **/.git*
