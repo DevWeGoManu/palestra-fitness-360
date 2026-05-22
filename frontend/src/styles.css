@@ -11,6 +11,7 @@
   --line: #e8dde0;
   --bg: #f6f3f4;
   --surface: #ffffff;
+  --surface-warm: #fffafb;
   --surface-solid: #ffffff;
   --shadow-xs: 0 1px 2px rgba(24, 17, 20, 0.05);
   --shadow-sm: 0 2px 8px rgba(24, 17, 20, 0.06);
@@ -45,7 +46,9 @@ body {
   font-size: 1rem;
   line-height: var(--leading-normal);
   color: var(--ink);
-  background: var(--bg);
+  background:
+    radial-gradient(circle at top left, rgba(146, 20, 38, 0.08), transparent 32rem),
+    linear-gradient(180deg, #fffafb 0%, var(--bg) 34%, #f3f7f6 100%);
 }
 
 button,
@@ -269,7 +272,9 @@ input:disabled {
 
 .main-area {
   min-width: 0;
-  background: var(--bg);
+  background:
+    radial-gradient(circle at 85% 0%, rgba(15, 118, 110, 0.08), transparent 22rem),
+    linear-gradient(180deg, #fffafb 0%, var(--bg) 44%, #eef7f6 100%);
 }
 
 .topbar {
@@ -279,8 +284,8 @@ input:disabled {
   justify-content: flex-end;
   gap: 12px;
   padding: 0 28px;
-  border-bottom: 1px solid var(--line);
-  background: var(--surface);
+  border-bottom: 1px solid rgba(232, 221, 224, 0.86);
+  background: rgba(255, 255, 255, 0.88);
   backdrop-filter: none;
 }
 
@@ -304,7 +309,7 @@ input:disabled {
 .page {
   width: min(1180px, 100%);
   margin: 0 auto;
-  padding: 34px max(28px, env(safe-area-inset-right)) 34px max(28px, env(safe-area-inset-left));
+  padding: 36px max(28px, env(safe-area-inset-right)) 38px max(28px, env(safe-area-inset-left));
 }
 
 .page-title {
@@ -407,10 +412,11 @@ input:disabled {
 .day,
 .panel-form,
 .editor-bottom-actions {
-  border: 1px solid var(--line);
+  border: 1px solid #ecd4d9;
   border-radius: 20px;
-  background: var(--surface);
-  box-shadow: var(--shadow-xs);
+  background:
+    linear-gradient(180deg, #ffffff 0%, var(--surface-warm) 100%);
+  box-shadow: 0 10px 26px rgba(24, 17, 20, 0.05);
   backdrop-filter: none;
 }
 
@@ -427,7 +433,7 @@ input:disabled {
   gap: 8px;
   color: var(--ink);
   text-align: left;
-  transition: border-color 160ms ease, background 160ms ease;
+  transition: border-color 160ms ease, background 160ms ease, transform 160ms ease, box-shadow 160ms ease;
 }
 
 .metric svg {
@@ -504,10 +510,11 @@ input:disabled {
 
 .primary {
   padding: 0 18px;
-  background: var(--brand);
+  background:
+    linear-gradient(180deg, var(--brand-strong), var(--brand));
   color: white;
   font-weight: 600;
-  box-shadow: var(--shadow-xs);
+  box-shadow: 0 10px 22px rgba(146, 20, 38, 0.18);
   transition: background 160ms ease, box-shadow 160ms ease;
 }
 
@@ -521,8 +528,9 @@ input:disabled {
 }
 
 .primary:hover {
-  background: var(--brand-strong);
-  box-shadow: var(--shadow-sm);
+  background:
+    linear-gradient(180deg, #c11f39, var(--brand));
+  box-shadow: 0 12px 26px rgba(146, 20, 38, 0.22);
 }
 
 .danger-solid:hover {
@@ -536,7 +544,9 @@ input:disabled {
 
 .metric:hover {
   border-color: #d9c8cd;
-  background: var(--brand-soft);
+  background: #ffffff;
+  box-shadow: 0 14px 32px rgba(146, 20, 38, 0.08);
+  transform: translateY(-1px);
 }
 
 .list-row:not(.static):hover {
@@ -596,6 +606,10 @@ button:disabled {
   gap: 10px;
 }
 
+.workout-list {
+  gap: 12px;
+}
+
 .list-row {
   width: 100%;
   min-height: 76px;
@@ -610,6 +624,60 @@ button:disabled {
   transition: border-color 160ms ease, background 160ms ease;
 }
 
+.workout-row {
+  min-height: 88px;
+  padding: 18px;
+  border-radius: 18px;
+  border-color: #ecd4d9;
+  background:
+    linear-gradient(180deg, #ffffff 0%, #fff9fa 100%);
+  box-shadow: 0 8px 24px rgba(146, 20, 38, 0.05);
+}
+
+.workout-row-main {
+  display: flex !important;
+  align-items: center;
+  gap: 16px !important;
+}
+
+.workout-row-main > span:last-child {
+  display: grid;
+  gap: 5px;
+  align-content: center;
+  justify-items: start;
+}
+
+.workout-row-icon {
+  width: 58px;
+  height: 58px;
+  max-width: 58px;
+  flex: 0 0 58px;
+  display: grid !important;
+  place-items: center;
+  border-radius: 18px;
+  background: var(--brand-soft);
+  color: var(--brand);
+  border: 1px solid #f1c7cf;
+}
+
+.workout-row-icon svg {
+  width: 24px;
+  height: 24px;
+}
+
+.workout-row-date {
+  width: fit-content;
+  min-height: 30px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 11px;
+  border-radius: 999px;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  font-weight: 600;
+  font-size: var(--text-sm);
+}
+
 .list-row.static {
   cursor: default;
 }
@@ -619,7 +687,7 @@ button:disabled {
   color: var(--muted);
 }
 
-.list-row span:first-child {
+.list-row > span:first-child {
   display: grid;
   gap: 2px;
   flex: 1;
@@ -734,27 +802,66 @@ button:disabled {
   background: var(--surface);
 }
 
+.empty-card {
+  display: grid;
+  gap: 5px;
+  border-style: solid;
+  border-color: #ecd4d9;
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, #ffffff 0%, #fff9fa 100%);
+}
+
+.empty-card strong {
+  color: var(--ink);
+  font-size: var(--text-lg);
+  line-height: var(--leading-tight);
+}
+
 .error {
   color: #b91c1c;
 }
 
 .loading {
+  display: grid;
+  gap: 12px;
   padding: 18px;
   color: var(--muted);
   font-size: var(--text-sm);
   line-height: var(--leading-normal);
 }
 
-.loading::after {
-  content: "";
+.loading > span {
+  font-weight: 600;
+}
+
+.skeleton-stack {
+  display: grid;
+  gap: 10px;
+}
+
+.skeleton-card {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  border: 1px solid #ecd4d9;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #ffffff 0%, #fff9fa 100%);
+}
+
+.skeleton-line {
   display: block;
-  width: min(240px, 80%);
-  height: 10px;
-  margin-top: 12px;
+  width: min(320px, 74%);
+  height: 12px;
   border-radius: 999px;
-  background: linear-gradient(90deg, #e5e7eb, #f8fafc, #e5e7eb);
+  background: linear-gradient(90deg, #eadce0, #ffffff, #eadce0);
   background-size: 200% 100%;
   animation: shimmer 1.2s infinite linear;
+}
+
+.skeleton-line.wide {
+  width: min(520px, 92%);
+  height: 16px;
 }
 
 @keyframes shimmer {
@@ -850,6 +957,11 @@ button:disabled {
   gap: 10px;
   margin-top: 18px;
   padding: 14px;
+  border: 1px solid #ecd4d9;
+  border-radius: 18px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(255, 241, 243, 0.9));
+  box-shadow: 0 14px 32px rgba(146, 20, 38, 0.08);
 }
 
 .editor-bottom-left,
@@ -894,11 +1006,13 @@ button:disabled {
   display: grid;
   gap: 14px;
   margin: 0 0 22px;
-  padding: 18px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: var(--surface);
-  box-shadow: var(--shadow-xs);
+  padding: 20px;
+  border: 1px solid #edcdd3;
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at top right, rgba(146, 20, 38, 0.08), transparent 26rem),
+    linear-gradient(135deg, #ffffff 0%, #fff7f8 100%);
+  box-shadow: 0 18px 38px rgba(146, 20, 38, 0.08);
 }
 
 .parser-heading,
@@ -943,6 +1057,9 @@ button:disabled {
   padding: 14px;
   line-height: 1.5;
   resize: vertical;
+  border-color: #edcdd3;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.92);
 }
 
 .parser-examples {
@@ -953,10 +1070,10 @@ button:disabled {
 
 .parser-examples span {
   padding: 4px 10px;
-  border: 1px solid var(--line);
+  border: 1px solid #edcdd3;
   border-radius: 999px;
-  background: var(--brand-soft);
-  color: var(--ink);
+  background: #ffffff;
+  color: var(--brand-dark);
   font-size: 0.8125rem;
   font-weight: 600;
 }
@@ -988,10 +1105,10 @@ button:disabled {
 .parser-day {
   display: grid;
   gap: 10px;
-  padding: 14px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: var(--surface);
+  padding: 16px;
+  border: 1px solid #edcdd3;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.9);
 }
 
 .parser-day > div:first-child {
@@ -1009,10 +1126,10 @@ button:disabled {
   grid-template-columns: minmax(160px, 1.3fr) repeat(4, minmax(92px, 0.7fr));
   gap: 8px;
   align-items: center;
-  padding: 10px;
-  border: 1px solid var(--line);
-  border-left: 3px solid var(--accent);
-  border-radius: var(--radius-md);
+  padding: 12px;
+  border: 1px solid #edcdd3;
+  border-left: 4px solid var(--accent);
+  border-radius: 14px;
   background: var(--surface);
 }
 
@@ -1185,9 +1302,11 @@ button:disabled {
   padding: 18px;
   display: grid;
   gap: 16px;
-  border-color: var(--line);
-  background: var(--surface);
-  box-shadow: var(--shadow-xs);
+  border-color: #ecd4d9;
+  border-radius: 20px;
+  background:
+    linear-gradient(180deg, #ffffff 0%, #fffafa 100%);
+  box-shadow: 0 12px 28px rgba(146, 20, 38, 0.06);
 }
 
 .day-head {
@@ -1213,12 +1332,13 @@ button:disabled {
   grid-template-columns: 2fr minmax(310px, 2.8fr) 1.7fr auto;
   gap: 10px;
   align-items: center;
-  padding: 12px;
-  border: 1px solid var(--line);
-  border-left: 3px solid var(--brand);
-  border-radius: 12px;
-  background: var(--surface);
-  box-shadow: none;
+  padding: 14px;
+  border: 1px solid #edcdd3;
+  border-left: 4px solid var(--brand);
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, #ffffff 0%, #fffbfb 100%);
+  box-shadow: 0 8px 20px rgba(146, 20, 38, 0.05);
   min-width: 0;
 }
 
@@ -1236,8 +1356,8 @@ button:disabled {
 
 .exercise input,
 .exercise select {
-  border-color: var(--line);
-  background: var(--surface);
+  border-color: #edcdd3;
+  background: rgba(255, 255, 255, 0.96);
 }
 
 .exercise-name-cell {
@@ -1259,10 +1379,10 @@ button:disabled {
   align-items: stretch;
   padding: 18px;
   border: 1px solid var(--line);
-  border-left: 3px solid var(--brand);
-  border-radius: 12px;
+  border-left: 4px solid var(--brand);
+  border-radius: 16px;
   background: var(--surface);
-  box-shadow: none;
+  box-shadow: var(--shadow-xs);
 }
 
 .athlete-exercise-main {
@@ -1294,7 +1414,7 @@ button:disabled {
   gap: 2px;
   padding: 10px 12px;
   border: 1px solid var(--line);
-  border-radius: var(--radius-md);
+  border-radius: 12px;
   background: var(--brand-soft);
   font-weight: 600;
   box-shadow: none;
@@ -1623,12 +1743,26 @@ button:disabled {
 
   .day-tabs {
     margin: 0 0 10px;
-    padding-bottom: 6px;
+    padding: 2px 2px 8px;
+    scrollbar-width: none;
+    scroll-snap-type: x proximity;
+  }
+
+  .day-tabs::-webkit-scrollbar {
+    display: none;
   }
 
   .day-tabs button {
-    min-height: 38px;
-    padding-inline: 13px;
+    min-height: 42px;
+    padding-inline: 16px;
+    scroll-snap-align: start;
+    border-color: #f1c7cf;
+    background: rgba(255, 255, 255, 0.86);
+    box-shadow: 0 6px 16px rgba(146, 20, 38, 0.08);
+  }
+
+  .day-tabs button.active {
+    box-shadow: 0 10px 24px rgba(146, 20, 38, 0.22);
   }
 
   .athlete-guide {
@@ -1647,8 +1781,12 @@ button:disabled {
   }
 
   .day {
-    padding: 14px;
-    border-radius: 12px;
+    padding: 12px;
+    border-radius: 18px;
+    border-color: #f1c7cf;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(255, 248, 249, 0.94));
+    box-shadow: 0 12px 30px rgba(146, 20, 38, 0.07);
   }
 
   .day-head {
@@ -1674,6 +1812,33 @@ button:disabled {
   .day-head {
     grid-template-columns: 1fr;
     grid-template-areas: none;
+  }
+
+  .workout-row {
+    display: grid;
+    grid-template-columns: 1fr;
+    align-items: stretch;
+    gap: 12px;
+    padding: 16px;
+  }
+
+  .workout-row-main {
+    display: grid !important;
+    grid-template-columns: 68px minmax(0, 1fr);
+    align-items: center;
+    min-height: 78px;
+  }
+
+  .workout-row-icon {
+    width: 58px !important;
+    max-width: 58px !important;
+    height: 58px;
+    flex: 0 0 58px !important;
+  }
+
+  .workout-row .row-action {
+    width: 100%;
+    justify-content: center;
   }
 
   .parser-panel {
@@ -1740,14 +1905,16 @@ button:disabled {
   .athlete-exercise {
     gap: 12px;
     padding: 16px;
-    border: 1px solid var(--line);
-    border-left: 3px solid var(--brand);
-    border-radius: 12px;
-    background: var(--surface);
+    border: 1px solid #f0cbd2;
+    border-left: 4px solid var(--brand);
+    border-radius: 18px;
+    background:
+      linear-gradient(180deg, #ffffff 0%, #fffafa 100%);
+    box-shadow: 0 8px 22px rgba(146, 20, 38, 0.06);
   }
 
   .athlete-exercise:first-child {
-    border-top: 1px solid var(--line);
+    border-top: 1px solid #f0cbd2;
   }
 
   .athlete-exercise-main {
@@ -1763,13 +1930,22 @@ button:disabled {
   .exercise-values {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
+    gap: 9px;
   }
 
   .exercise-values span {
     min-width: 0;
+    min-height: 68px;
+    align-content: center;
     padding: 11px 12px;
-    border-radius: var(--radius-md);
+    border-color: #f1c7cf;
+    border-radius: 14px;
+    background: #ffffff;
+    box-shadow: 0 6px 16px rgba(146, 20, 38, 0.04);
+  }
+
+  .exercise-values small {
+    color: var(--brand-dark);
   }
 
   .exercise-values .exercise-note {
@@ -1782,9 +1958,10 @@ button:disabled {
   }
 
   .athlete-exercise textarea {
-    min-height: 58px;
-    border-radius: var(--radius-md);
-    background: var(--surface);
+    min-height: 64px;
+    border-color: #f1c7cf;
+    border-radius: 14px;
+    background: #ffffff;
   }
 
   .exercise-actions,

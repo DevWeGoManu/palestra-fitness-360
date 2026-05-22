@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import { CalendarDays, Plus, Trash2 } from 'lucide-react';
 import { api } from '../api.js';
 import { Loading } from '../components/Loading.jsx';
 import { canEditWorkouts, canManage, canSelfManageWorkouts, go } from '../utils/router.js';
@@ -79,11 +79,17 @@ export function Workouts({ user, notify }) {
         </form>
       )}
       {loading ? <Loading /> : (
-        <div className="list">
+        <div className="list workout-list">
           {plans.map((plan) => (
-            <div className="list-row" role="button" tabIndex="0" key={plan.id} onClick={() => go(`/plan?id=${plan.id}`)} onKeyDown={(event) => { if (event.key === 'Enter') go(`/plan?id=${plan.id}`); }}>
-              <span><strong>{plan.assigned_user_name || plan.name}</strong></span>
-              <span>{new Date(plan.created_at).toLocaleDateString('it-IT')}</span>
+            <div className="list-row workout-row" role="button" tabIndex="0" key={plan.id} onClick={() => go(`/plan?id=${plan.id}`)} onKeyDown={(event) => { if (event.key === 'Enter') go(`/plan?id=${plan.id}`); }}>
+              <span className="workout-row-main">
+                <span className="workout-row-icon" aria-hidden="true"><CalendarDays size={18} /></span>
+                <span>
+                  <strong>{plan.assigned_user_name || plan.name}</strong>
+                  <small>Scheda allenamento</small>
+                  <span className="workout-row-date">{new Date(plan.created_at).toLocaleDateString('it-IT')}</span>
+                </span>
+              </span>
               {canEditWorkouts(user) && (
                 <button className="ghost danger row-action" type="button" onClick={(event) => deletePlan(event, plan)}>
                   <Trash2 size={16} /> Elimina
@@ -91,7 +97,12 @@ export function Workouts({ user, notify }) {
               )}
             </div>
           ))}
-          {plans.length === 0 && <p className="empty">Nessun programma disponibile.</p>}
+          {plans.length === 0 && (
+            <div className="empty empty-card">
+              <strong>Nessun allenamento ancora</strong>
+              <span>{canEditWorkouts(user) ? 'Crea una nuova scheda per iniziare.' : 'Il tuo coach non ha ancora assegnato una scheda.'}</span>
+            </div>
+          )}
         </div>
       )}
     </section>

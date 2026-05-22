@@ -59,7 +59,12 @@ export function UsersPage({ notify }) {
               <span className="badge-stack"><span className="badge">{item.role}</span><span className={`badge status-${item.status}`}>{item.status}</span></span>
             </button>
           ))}
-          {filteredUsers.length === 0 && <p className="empty">Nessun utente trovato.</p>}
+          {filteredUsers.length === 0 && (
+            <div className="empty empty-card">
+              <strong>Nessun utente trovato</strong>
+              <span>Prova a cambiare filtro o termine di ricerca.</span>
+            </div>
+          )}
         </div>
       )}
     </section>
