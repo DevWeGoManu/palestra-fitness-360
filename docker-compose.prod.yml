@@ -1,0 +1,56 @@
+services:
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root_password}
+      MYSQL_DATABASE: ${DB_NAME:-gym_app}
+      MYSQL_USER: ${DB_USER:-gym_user}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-gym_password}
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./database/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p$${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: .
+      dockerfile: docker/php-fpm/Dockerfile
+    restart: unless-stopped
+    environment:
+      DB_HOST: ${DB_HOST:-mysql}
+      DB_NAME: ${DB_NAME:-gym_app}
+      DB_USER: ${DB_USER:-gym_user}
+      DB_PASSWORD: ${DB_PASSWORD:-gym_password}
+      API_URL: ${API_URL:-http://localhost:8080/api}
+      APP_URL: ${APP_URL:-http://localhost:8080}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:8080}
+      SESSION_TTL: ${SESSION_TTL:-3600}
+      MAIL_FROM: ${MAIL_FROM:-noreply@palestra.local}
+      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-Gym Manager}
+      ADMIN_NOTIFY_EMAIL: ${ADMIN_NOTIFY_EMAIL:-}
+    volumes:
+      - ./backend:/var/www/backend
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    volumes:
+      - ./backend:/var/www/backend:ro
+      - ./frontend/dist:/usr/share/nginx/html:ro
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - backend
+
+volumes:
+  mysql_data:

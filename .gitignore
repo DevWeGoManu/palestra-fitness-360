@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+frontend/node_modules/
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+!frontend/.env.example
+backend/config/config.php
+release-aruba/config/config.php
+
+# Runtime data
+backend/storage/logs/*
+!backend/storage/logs/.gitkeep
+release-aruba/storage/logs/*
+!release-aruba/storage/logs/.gitkeep
+*.log
+
+# Local cookies and temporary files
+*.cookies
+live-cookie.txt
+tmp_cookie.txt
+
+# Build outputs
+frontend/dist/
+release-aruba/
+release-aruba.zip
+
+# Local database/backup artifacts
+backups-test/
+*.sql.gz
+*.dump
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

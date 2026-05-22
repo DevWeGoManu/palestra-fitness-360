@@ -1,0 +1,63 @@
+name: Deploy Aruba
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm install
+
+      - name: Build frontend for Aruba subfolder
+        working-directory: frontend
+        env:
+          VITE_BASE_PATH: /Crm/
+          VITE_API_BASE: /Crm/api
+        run: npm run build
+
+      - name: Prepare release folder
+        run: |
+          rm -rf release-aruba
+          mkdir -p release-aruba release-aruba-db
+          cp -R frontend/dist/. release-aruba/
+          cp -R backend/api release-aruba/api
+          cp -R backend/config release-aruba/config
+          cp -R backend/lib release-aruba/lib
+          cp -R backend/tools release-aruba/tools
+          mkdir -p release-aruba/storage/logs
+          printf 'Require all denied\n' > release-aruba/config/.htaccess
+          printf 'Require all denied\n' > release-aruba/lib/.htaccess
+          printf 'Require all denied\n' > release-aruba/tools/.htaccess
+          printf 'Require all denied\n' > release-aruba/storage/.htaccess
+          cp database/schema.sql release-aruba-db/schema.sql
+          cp database/migrations_*.sql release-aruba-db/
+
+      - name: Deploy via FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          server-dir: ${{ secrets.FTP_REMOTE_DIR }}
+          local-dir: release-aruba/
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/node_modules/**
+            config/config.php
+            storage/logs/**
