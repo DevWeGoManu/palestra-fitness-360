@@ -41,7 +41,7 @@ export function UsersPage({ notify }) {
 
   return (
     <section className="page">
-      <div className="page-title"><h2>Utenti</h2><p>Gestione atleti, istruttori e admin.</p></div>
+      <div className="page-title"><h2>Utenti</h2></div>
       <div className="toolbar">
         <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
           {statuses.map((status) => <option key={status} value={status}>{status || 'Tutti gli status'}</option>)}

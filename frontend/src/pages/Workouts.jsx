@@ -62,7 +62,7 @@ export function Workouts({ user, notify }) {
   return (
     <section className="page">
       <div className="page-title row">
-        <div><h2>I miei allenamenti</h2><p>{canManage(user) ? 'Tutti i programmi assegnati.' : 'Solo i tuoi programmi.'}</p></div>
+        <div><h2>Lista allenamenti</h2></div>
       </div>
       {canManage(user) && (
         <form className="toolbar" onSubmit={createPlan}>
