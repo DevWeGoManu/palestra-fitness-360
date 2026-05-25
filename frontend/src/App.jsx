@@ -13,6 +13,7 @@ const PlanEditor = lazy(() => import('./pages/PlanEditor.jsx').then((module) => 
 const UserDetail = lazy(() => import('./pages/UserDetail.jsx').then((module) => ({ default: module.UserDetail })));
 const UsersPage = lazy(() => import('./pages/UsersPage.jsx').then((module) => ({ default: module.UsersPage })));
 const Workouts = lazy(() => import('./pages/Workouts.jsx').then((module) => ({ default: module.Workouts })));
+const Tickets = lazy(() => import('./pages/Tickets.jsx').then((module) => ({ default: module.Tickets })));
 
 function App() {
   const [route, setRoute] = useState(routeFromHash());
@@ -66,6 +67,7 @@ function App() {
           {route.path === '/' && !canManage(user) && <Workouts user={user} notify={notify} />}
           {route.path === '/workouts' && <Workouts user={user} notify={notify} />}
           {route.path === '/users' && canManage(user) && <UsersPage notify={notify} />}
+          {route.path === '/tickets' && <Tickets notify={notify} />}
           {route.path === '/user' && (canManage(user) || Number(route.params.get('id')) === Number(user.id)) && (
             <UserDetail id={route.params.get('id')} currentUser={user} onUserUpdate={setUser} notify={notify} />
           )}

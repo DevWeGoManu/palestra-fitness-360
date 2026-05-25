@@ -31,6 +31,29 @@ async function request(path, options = {}) {
   return data;
 }
 
+async function uploadRequest(path, formData) {
+  const headers = {};
+  if (csrfToken) {
+    headers['X-CSRF-Token'] = csrfToken;
+  }
+
+  const response = await fetch(`${API_BASE}${path}`, {
+    method: 'POST',
+    credentials: 'include',
+    headers,
+    body: formData
+  });
+
+  const data = await response.json().catch(() => ({}));
+  if (data.csrf_token) {
+    setCsrfToken(data.csrf_token);
+  }
+  if (!response.ok) {
+    throw new Error(data.error || 'Errore API');
+  }
+  return data;
+}
+
 export const api = {
   setCsrfToken,
   me: () => request('/auth/me.php'),
@@ -87,5 +110,13 @@ export const api = {
     method: 'POST',
     body: JSON.stringify({ exercise_id: exerciseId, note })
   }),
-  dashboardStats: () => request('/dashboard/stats.php')
+  dashboardStats: () => request('/dashboard/stats.php'),
+  createTicket: ({ message, image }) => {
+    const formData = new FormData();
+    formData.append('message', message || '');
+    if (image) {
+      formData.append('image', image);
+    }
+    return uploadRequest('/tickets/index.php', formData);
+  }
 };

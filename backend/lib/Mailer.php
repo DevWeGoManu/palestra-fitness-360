@@ -58,6 +58,76 @@ function send_app_mail(string $to, string $subject, string $body): bool
     return $sent;
 }
 
+function send_app_mail_with_attachment(string $to, string $subject, string $body, ?array $attachment = null): bool
+{
+    if ($attachment === null) {
+        return send_app_mail($to, $subject, $body);
+    }
+
+    $config = app_config();
+    $from = $config['mail_from'] ?? 'noreply@localhost';
+    $fromName = $config['mail_from_name'] ?? 'Palestra Fitness 360';
+    $safeFrom = filter_var($from, FILTER_VALIDATE_EMAIL) ? $from : 'noreply@localhost';
+    $encodedSubject = '=?UTF-8?B?' . base64_encode($subject) . '?=';
+    $boundary = 'gym_ticket_' . bin2hex(random_bytes(16));
+    $filename = preg_replace('/[^a-z0-9._-]/i', '_', $attachment['name'] ?? 'screenshot') ?: 'screenshot';
+    $mime = $attachment['type'] ?? 'application/octet-stream';
+    $content = chunk_split(base64_encode((string) ($attachment['content'] ?? '')));
+
+    $headers = [
+        'From: ' . $fromName . ' <' . $safeFrom . '>',
+        'Reply-To: ' . $safeFrom,
+        'MIME-Version: 1.0',
+        'Content-Type: multipart/mixed; boundary="' . $boundary . '"',
+        'X-Mailer: PHP/' . phpversion(),
+    ];
+
+    $message = "--$boundary\r\n";
+    $message .= "Content-Type: text/plain; charset=UTF-8\r\n";
+    $message .= "Content-Transfer-Encoding: 8bit\r\n\r\n";
+    $message .= $body . "\r\n\r\n";
+    $message .= "--$boundary\r\n";
+    $message .= "Content-Type: $mime; name=\"$filename\"\r\n";
+    $message .= "Content-Transfer-Encoding: base64\r\n";
+    $message .= "Content-Disposition: attachment; filename=\"$filename\"\r\n\r\n";
+    $message .= $content . "\r\n";
+    $message .= "--$boundary--";
+
+    $sent = false;
+    $error = null;
+    if (function_exists('mail')) {
+        $parameters = filter_var($safeFrom, FILTER_VALIDATE_EMAIL) ? '-f' . $safeFrom : '';
+        $sent = $parameters !== ''
+            ? @mail($to, $encodedSubject, $message, implode("\r\n", $headers), $parameters)
+            : @mail($to, $encodedSubject, $message, implode("\r\n", $headers));
+        if (!$sent) {
+            $error = error_get_last()['message'] ?? null;
+        }
+    } else {
+        $error = 'Funzione mail() non disponibile';
+    }
+
+    $logDir = __DIR__ . '/../storage/logs';
+    if (is_dir($logDir) && is_writable($logDir)) {
+        file_put_contents($logDir . '/mail.log', json_encode([
+            'time' => gmdate('c'),
+            'to' => $to,
+            'subject' => $subject,
+            'body' => $body,
+            'attachment' => $filename,
+            'mail_sent' => $sent,
+            'from' => $safeFrom,
+            'error' => $error,
+        ], JSON_UNESCAPED_SLASHES) . PHP_EOL, FILE_APPEND | LOCK_EX);
+    }
+
+    if (!$sent) {
+        log_event('mail_failed', ['to' => $to, 'subject' => $subject, 'from' => $safeFrom, 'error' => $error]);
+    }
+
+    return $sent;
+}
+
 function send_verification_email(string $email, string $fullName, string $token): void
 {
     $config = app_config();

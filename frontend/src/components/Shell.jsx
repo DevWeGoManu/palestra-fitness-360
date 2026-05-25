@@ -1,5 +1,5 @@
 import React from 'react';
-import { CalendarDays, LogOut, Menu, UserCircle, Users, X } from 'lucide-react';
+import { CalendarDays, LifeBuoy, LogOut, Menu, UserCircle, Users, X } from 'lucide-react';
 import { canManage, go } from '../utils/router.js';
 
 export function Shell({ user, onLogout, children }) {
@@ -36,6 +36,13 @@ export function Shell({ user, onLogout, children }) {
             );
           })}
         </nav>
+        <button
+          className={currentPath === '/tickets' ? 'active sidebar-ticket' : 'sidebar-ticket'}
+          aria-label="Ticket"
+          onClick={() => { go('/tickets'); setOpen(false); }}
+        >
+          <LifeBuoy size={19} /> Ticket
+        </button>
         <button className="ghost logout" aria-label="Esci" onClick={onLogout}><LogOut size={18} /> Esci</button>
       </aside>
       <div className="main-area">

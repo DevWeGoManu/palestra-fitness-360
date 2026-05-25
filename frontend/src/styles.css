@@ -245,6 +245,7 @@ input:disabled {
 }
 
 .sidebar nav button,
+.sidebar-ticket,
 .logout {
   justify-content: flex-start;
   padding: 0 14px;
@@ -254,20 +255,26 @@ input:disabled {
   transition: transform 160ms ease, background 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
 }
 
-.sidebar nav button:hover {
+.sidebar nav button:hover,
+.sidebar-ticket:hover {
   background: rgba(255, 255, 255, 0.12);
   border-color: rgba(255, 255, 255, 0.2);
 }
 
-.sidebar nav button.active {
+.sidebar nav button.active,
+.sidebar-ticket.active {
   background: var(--brand);
   border-color: rgba(255, 255, 255, 0.24);
   box-shadow: none;
   transform: none;
 }
 
-.logout {
+.sidebar-ticket {
   margin-top: auto;
+}
+
+.logout {
+  margin-top: 0;
 }
 
 .main-area {
@@ -499,6 +506,104 @@ input:disabled {
 
 .programming-panel h3 {
   margin: 0 0 4px;
+}
+
+.ticket-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ticket-title-icon {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border: 1px solid #f1c7cf;
+  border-radius: 16px;
+  background: var(--brand-soft);
+  color: var(--brand);
+}
+
+.ticket-panel {
+  width: min(760px, 100%);
+  display: grid;
+  gap: 16px;
+  padding: 20px;
+  border: 1px solid #ecd4d9;
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at top right, rgba(146, 20, 38, 0.08), transparent 24rem),
+    linear-gradient(180deg, #ffffff 0%, #fffafb 100%);
+  box-shadow: 0 16px 36px rgba(24, 17, 20, 0.07);
+}
+
+.ticket-field {
+  display: grid;
+  gap: 8px;
+}
+
+.ticket-field > span {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.ticket-field textarea {
+  min-height: 180px;
+  border-color: #edcdd3;
+  border-radius: 18px;
+  resize: vertical;
+}
+
+.ticket-field small {
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+
+.ticket-upload {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.ticket-upload-button {
+  position: relative;
+  overflow: hidden;
+}
+
+.ticket-upload-button input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.ticket-file {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  padding: 0 8px 0 12px;
+  border: 1px solid #ecd4d9;
+  border-radius: 999px;
+  background: #ffffff;
+}
+
+.ticket-file span {
+  max-width: min(360px, 62vw);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.ticket-submit {
+  justify-self: start;
 }
 
 .muted {
@@ -1802,6 +1907,7 @@ button:disabled {
   .toolbar,
   .toolbar.wrap,
   .search-toolbar,
+  .ticket-panel,
   .parser-heading,
   .parser-preview-head,
   .parser-actions,
@@ -1839,6 +1945,32 @@ button:disabled {
   .workout-row .row-action {
     width: 100%;
     justify-content: center;
+  }
+
+  .ticket-title {
+    align-items: flex-start;
+  }
+
+  .ticket-panel {
+    padding: 16px;
+    border-radius: 18px;
+  }
+
+  .ticket-upload,
+  .ticket-submit,
+  .ticket-upload-button {
+    width: 100%;
+  }
+
+  .ticket-upload-button,
+  .ticket-submit {
+    justify-content: center;
+  }
+
+  .ticket-file {
+    width: 100%;
+    justify-content: space-between;
+    border-radius: 14px;
   }
 
   .parser-panel {
