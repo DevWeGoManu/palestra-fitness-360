@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { ImagePlus, Send, TicketCheck, X } from 'lucide-react';
 import { api } from '../api.js';
 
@@ -6,6 +6,7 @@ export function Tickets({ notify }) {
   const [message, setMessage] = useState('');
   const [image, setImage] = useState(null);
   const [loading, setLoading] = useState(false);
+  const fileInputRef = useRef(null);
 
   function chooseImage(event) {
     const file = event.target.files?.[0] || null;
@@ -40,7 +41,9 @@ export function Tickets({ notify }) {
       notify(data.message || 'Ticket inviato');
       setMessage('');
       setImage(null);
-      event.currentTarget.reset();
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     } catch (err) {
       notify(err.message, 'error');
     } finally {
@@ -75,12 +78,17 @@ export function Tickets({ notify }) {
           <label className="ghost ticket-upload-button">
             <ImagePlus size={18} />
             Aggiungi immagine
-            <input type="file" accept="image/png,image/jpeg,image/webp" onChange={chooseImage} />
+            <input ref={fileInputRef} type="file" accept="image/png,image/jpeg,image/webp" onChange={chooseImage} />
           </label>
           {image && (
             <div className="ticket-file">
               <span>{image.name}</span>
-              <button className="icon-button" type="button" aria-label="Rimuovi immagine" onClick={() => setImage(null)}>
+              <button className="icon-button" type="button" aria-label="Rimuovi immagine" onClick={() => {
+                setImage(null);
+                if (fileInputRef.current) {
+                  fileInputRef.current.value = '';
+                }
+              }}>
                 <X size={17} />
               </button>
             </div>
