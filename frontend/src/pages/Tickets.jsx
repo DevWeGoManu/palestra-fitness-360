@@ -80,6 +80,7 @@ export function Tickets({ notify }) {
             Aggiungi immagine
             <input ref={fileInputRef} type="file" accept="image/png,image/jpeg,image/webp" onChange={chooseImage} />
           </label>
+          <small className="ticket-upload-help">Screenshot facoltativo, utile per capire meglio il problema.</small>
           {image && (
             <div className="ticket-file">
               <span>{image.name}</span>

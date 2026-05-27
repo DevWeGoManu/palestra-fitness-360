@@ -91,6 +91,7 @@ export function UserDetail({ id, currentUser, onUserUpdate, notify }) {
   const canEditProfile = isSelf || isCurrentAdmin;
   const showAssignedPlans = canManage(currentUser) && !canSeeProgramming;
   const statusLabels = { active: 'Attivo', pending: 'In attesa', disabled: 'Disabilitato' };
+  const roleLabels = { atleta: 'Atleta', autonomo: 'Autonomo', istruttore: 'Istruttore', admin: 'Admin' };
 
   return (
     <section className="page">
@@ -103,6 +104,26 @@ export function UserDetail({ id, currentUser, onUserUpdate, notify }) {
           {canDeleteUser && <button className="ghost danger" onClick={remove}><Trash2 size={17} /> Elimina</button>}
         </div>
       </div>
+
+      <section className="user-info-card" aria-label="Informazioni utente">
+        <div className="user-info-main">
+          <span className="user-info-avatar" aria-hidden="true">{getInitials(data.user.full_name)}</span>
+          <div>
+            <strong>{data.user.full_name}</strong>
+            <span>{data.user.email}</span>
+          </div>
+        </div>
+        <div className="user-info-grid">
+          <div>
+            <small>Ruolo</small>
+            <strong>{roleLabels[data.user.role] || data.user.role}</strong>
+          </div>
+          <div>
+            <small>Status</small>
+            <strong><span className={`status-dot status-${data.user.status}`} aria-hidden="true" />{statusLabels[data.user.status] || data.user.status}</strong>
+          </div>
+        </div>
+      </section>
 
       {canSeeProgramming && (
         <section className="panel-form programming-panel">
@@ -159,4 +180,15 @@ export function UserDetail({ id, currentUser, onUserUpdate, notify }) {
       )}
     </section>
   );
+}
+
+function getInitials(name = '') {
+  const initials = name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part.charAt(0))
+    .join('')
+    .toUpperCase();
+  return initials || 'U';
 }

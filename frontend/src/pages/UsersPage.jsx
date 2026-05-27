@@ -5,6 +5,18 @@ import { Loading } from '../components/Loading.jsx';
 import { go } from '../utils/router.js';
 
 const statuses = ['', 'pending', 'active', 'disabled'];
+const statusLabels = {
+  '': 'Tutti',
+  pending: 'In attesa',
+  active: 'Attivi',
+  disabled: 'Disabilitati'
+};
+const roleLabels = {
+  atleta: 'Atleta',
+  autonomo: 'Autonomo',
+  istruttore: 'Istruttore',
+  admin: 'Admin'
+};
 
 export function UsersPage({ notify }) {
   const [users, setUsers] = useState([]);
@@ -41,22 +53,53 @@ export function UsersPage({ notify }) {
 
   return (
     <section className="page">
-      <div className="page-title"><h2>Utenti</h2></div>
-      <div className="toolbar">
-        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-          {statuses.map((status) => <option key={status} value={status}>{status || 'Tutti gli status'}</option>)}
-        </select>
+      <div className="page-title">
+        <h2>Utenti</h2>
+        <p>Gestisci profili, status e programmazione degli atleti.</p>
       </div>
-      <form className="toolbar search-toolbar" onSubmit={applySearch}>
-        <input placeholder="Cerca per nome, email o ruolo" value={searchInput} onChange={(e) => setSearchInput(e.target.value)} />
-        <button className="primary"><Search size={18} /> Cerca</button>
-      </form>
+
+      <div className="users-controls">
+        <div className="users-status-filter" role="group" aria-label="Filtra utenti per status">
+          {statuses.map((status) => (
+            <button
+              key={status}
+              type="button"
+              className={statusFilter === status ? 'active' : ''}
+              aria-pressed={statusFilter === status}
+              onClick={() => setStatusFilter(status)}
+            >
+              {statusLabels[status]}
+            </button>
+          ))}
+        </div>
+
+        <form className="users-search" onSubmit={applySearch}>
+          <label className="sr-only" htmlFor="users-search">Cerca utenti</label>
+          <input
+            id="users-search"
+            placeholder="Cerca per nome, email o ruolo"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+          />
+          <button className="primary" type="submit"><Search size={18} /> Cerca</button>
+        </form>
+      </div>
+
       {loading ? <Loading /> : (
-        <div className="list">
+        <div className="list users-list">
           {filteredUsers.map((item) => (
-            <button className="list-row" key={item.id} onClick={() => go(`/user?id=${item.id}`)}>
-              <span><strong>{item.full_name}</strong><small>{item.email}</small></span>
-              <span className="badge-stack"><span className="badge">{item.role}</span><span className={`badge status-${item.status}`}>{item.status}</span></span>
+            <button className="list-row user-card" key={item.id} onClick={() => go(`/user?id=${item.id}`)}>
+              <span className="user-card-main">
+                <span className="user-card-avatar" aria-hidden="true">{getInitials(item.full_name)}</span>
+                <span>
+                  <strong>{item.full_name}</strong>
+                  <small>{item.email}</small>
+                </span>
+              </span>
+              <span className="badge-stack user-card-badges">
+                <span className="badge role-badge">{roleLabels[item.role] || item.role}</span>
+                <span className={`badge status-${item.status}`}>{statusLabels[item.status] || item.status}</span>
+              </span>
             </button>
           ))}
           {filteredUsers.length === 0 && (
@@ -69,4 +112,15 @@ export function UsersPage({ notify }) {
       )}
     </section>
   );
+}
+
+function getInitials(name = '') {
+  const initials = name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part.charAt(0))
+    .join('')
+    .toUpperCase();
+  return initials || 'U';
 }

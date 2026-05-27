@@ -347,6 +347,15 @@ export function PlanEditor({ id, user, notify, editMode = false }) {
                 {parserPreview.warnings.map((warning) => <span key={warning}>{warning}</span>)}
               </div>
             )}
+            {!parserPreview?.days?.length && (
+              <div className="parser-empty" aria-live="polite">
+                <FileText size={22} />
+                <div>
+                  <strong>La preview della scheda apparirà qui dopo la generazione</strong>
+                  <span>Inserisci il testo dell'allenamento, scegli il giorno e genera una preview prima di salvare.</span>
+                </div>
+              </div>
+            )}
             {parserPreview?.days?.length > 0 && (
               <div className="parser-preview">
                 <div className="parser-preview-head">
@@ -435,8 +444,31 @@ export function PlanEditor({ id, user, notify, editMode = false }) {
         {daysToRender.map((day) => {
           const dayIndex = plan.days.findIndex((item) => Number(item.id) === Number(day.id));
           return (
-          <article className="day" key={day.id}>
+          <article className={['day', (manualEditing || dirty) ? 'is-editing' : ''].filter(Boolean).join(' ')} key={day.id}>
+            {editable && (
+              <div className="current-plan-head no-print">
+                <div>
+                  <span>Scheda corrente</span>
+                  <strong>{formatDayTitle(day)}</strong>
+                </div>
+                <div className="current-plan-toolbar">
+                  <div className="editor-bottom-copy">
+                    <strong>{manualEditing || dirty ? 'Modifiche non salvate' : 'Scheda salvata'}</strong>
+                    <span>{manualEditing || dirty ? 'Salva le modifiche quando hai finito.' : 'Puoi modificare manualmente la scheda corrente.'}</span>
+                  </div>
+                  {manualEditing && <button className="ghost" onClick={cancelManualEditing}>Annulla</button>}
+                  {!manualEditing && !dirty && <button className="ghost" onClick={startManualEditing}>Modifica</button>}
+                  {(manualEditing || dirty) && <button className="primary" onClick={save}>Salva</button>}
+                </div>
+              </div>
+            )}
             <div className="exercise-list">
+              {editable && !showManualEditor && day.exercises.length === 0 && (
+                <div className="current-plan-empty">
+                  <strong>Nessun esercizio ancora</strong>
+                  <span>La scheda comparirà qui dopo aver applicato una preview oppure dopo una modifica manuale.</span>
+                </div>
+              )}
               {day.exercises.map((exercise, exerciseIndex) => (
                 showManualEditor ? (
                   <div className="exercise" key={`${day.id}-${exerciseIndex}`}>
@@ -461,7 +493,7 @@ export function PlanEditor({ id, user, notify, editMode = false }) {
                     </div>
                     <textarea
                       aria-label={`Note atleta per ${exercise.name}`}
-                      placeholder="Le tue note"
+                      placeholder="Annota sensazioni, carichi o varianti"
                       value={exercise.athlete_note || ''}
                       onChange={(e) => updateExercise(dayIndex, exerciseIndex, { athlete_note: e.target.value })}
                       onBlur={() => saveAthleteNote(exercise)}
@@ -482,7 +514,7 @@ export function PlanEditor({ id, user, notify, editMode = false }) {
           );
         })}
       </div>
-      {editable && (
+      {editable && (manualEditing || dirty) && (
         <div className="editor-bottom-actions no-print">
           {(manualEditing || dirty) && (
             <div className="editor-bottom-left">
@@ -497,12 +529,6 @@ export function PlanEditor({ id, user, notify, editMode = false }) {
               <button className="ghost danger" onClick={deletePlan}>Elimina programma</button>
             </div>
           )}
-          <div className="editor-bottom-right">
-            {dirty && <span>Modifiche non salvate</span>}
-            {manualEditing && <button className="ghost" onClick={cancelManualEditing}>Annulla</button>}
-            {!manualEditing && <button className="ghost" onClick={startManualEditing}>Modifica</button>}
-            {(manualEditing || dirty) && <button className="primary" onClick={save}>Salva</button>}
-          </div>
         </div>
       )}
       <ConfirmDialog dialog={confirmDialog} onCancel={() => setConfirmDialog(null)} onConfirm={confirmAction} />
