@@ -1221,6 +1221,84 @@ button:disabled {
   background: var(--surface);
 }
 
+.install-banner {
+  position: fixed;
+  right: max(12px, env(safe-area-inset-right));
+  bottom: max(12px, env(safe-area-inset-bottom));
+  left: max(12px, env(safe-area-inset-left));
+  z-index: 35;
+  display: none;
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid rgba(224, 211, 216, 0.92);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(146, 20, 38, 0.06), transparent 14rem),
+    rgba(255, 255, 255, 0.96);
+  color: var(--ink);
+  box-shadow: 0 18px 46px rgba(24, 17, 20, 0.16);
+}
+
+.install-banner-copy {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.install-banner-copy strong {
+  color: var(--ink);
+  font-size: 0.9375rem;
+  font-weight: 700;
+  line-height: var(--leading-tight);
+}
+
+.install-banner-copy span {
+  color: var(--muted);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.install-banner-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.install-banner-primary,
+.install-banner-secondary {
+  min-height: 38px;
+  border-radius: 11px;
+  padding-inline: 12px;
+  font-size: 0.8125rem;
+}
+
+.install-banner-dismiss {
+  min-height: 34px;
+  padding: 0 2px;
+  border: 0;
+  background: transparent;
+  color: #6f666d;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-underline-offset: 4px;
+}
+
+.install-banner-dismiss:hover {
+  color: var(--brand-dark);
+  text-decoration-color: currentColor;
+}
+
+.install-banner-dismiss:focus-visible {
+  outline: 2px solid var(--brand-ring);
+  outline-offset: 3px;
+}
+
 .list {
   display: grid;
   gap: 10px;
@@ -2583,6 +2661,15 @@ button:disabled {
     min-height: 70px;
   }
 
+  .install-banner {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .install-banner-actions {
+    justify-content: flex-start;
+  }
+
   .page {
     padding: 18px max(12px, env(safe-area-inset-right)) max(54px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
   }
@@ -3204,6 +3291,29 @@ button:disabled {
 }
 
 @media (max-width: 420px) {
+  .install-banner {
+    gap: 10px;
+    padding: 11px;
+    border-radius: 16px;
+  }
+
+  .install-banner-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    width: 100%;
+  }
+
+  .install-banner-primary,
+  .install-banner-secondary {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .install-banner-dismiss {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+
   .users-status-filter {
     gap: 4px;
   }
@@ -3364,7 +3474,8 @@ button:disabled {
   .workout-row,
   .athlete-exercise,
   .users-status-filter button,
-  .user-card {
+  .user-card,
+  .install-banner-dismiss {
     transition: none;
   }
 

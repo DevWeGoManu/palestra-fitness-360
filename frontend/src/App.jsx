@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { api } from './api.js';
+import { InstallAppBanner } from './components/InstallAppBanner.jsx';
 import { Shell } from './components/Shell.jsx';
 import { Toast } from './components/Toast.jsx';
 import { Login } from './pages/Login.jsx';
@@ -44,20 +45,20 @@ function App() {
   }
 
   if (!user && route.path === '/register') {
-    return <><Register notify={notify} /><Toast toast={toast} onClose={() => setToast(null)} /></>;
+    return <><Register notify={notify} /><InstallAppBanner /><Toast toast={toast} onClose={() => setToast(null)} /></>;
   }
   if (!user && route.path === '/forgot-password') {
-    return <><ForgotPassword notify={notify} /><Toast toast={toast} onClose={() => setToast(null)} /></>;
+    return <><ForgotPassword notify={notify} /><InstallAppBanner /><Toast toast={toast} onClose={() => setToast(null)} /></>;
   }
   if (!user && route.path === '/reset-password') {
-    return <><ResetPassword token={route.params.get('token') || ''} notify={notify} /><Toast toast={toast} onClose={() => setToast(null)} /></>;
+    return <><ResetPassword token={route.params.get('token') || ''} notify={notify} /><InstallAppBanner /><Toast toast={toast} onClose={() => setToast(null)} /></>;
   }
   if (!user && route.path === '/verify-email') {
-    return <><VerifyEmail token={route.params.get('token') || ''} notify={notify} /><Toast toast={toast} onClose={() => setToast(null)} /></>;
+    return <><VerifyEmail token={route.params.get('token') || ''} notify={notify} /><InstallAppBanner /><Toast toast={toast} onClose={() => setToast(null)} /></>;
   }
 
   if (!user) {
-    return <><Login onLogin={setUser} notify={notify} /><Toast toast={toast} onClose={() => setToast(null)} /></>;
+    return <><Login onLogin={setUser} notify={notify} /><InstallAppBanner /><Toast toast={toast} onClose={() => setToast(null)} /></>;
   }
 
   return (
@@ -83,6 +84,7 @@ function App() {
           )}
         </Suspense>
       </Shell>
+      <InstallAppBanner />
       <Toast toast={toast} onClose={() => setToast(null)} />
     </>
   );
