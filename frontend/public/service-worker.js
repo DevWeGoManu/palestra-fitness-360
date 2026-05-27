@@ -1,15 +1,16 @@
-const CACHE_NAME = 'athleodesk-v1';
+const CACHE_NAME = 'athleodesk-v2';
 const scopeUrl = new URL(self.registration.scope);
 const scopePath = scopeUrl.pathname.endsWith('/') ? scopeUrl.pathname : `${scopeUrl.pathname}/`;
 const fromScope = (path) => `${scopePath}${path}`.replace(/\/{2,}/g, '/');
 const APP_SHELL = [
   scopePath,
   fromScope('index.html'),
-  fromScope('manifest.json'),
-  fromScope('icons/favicon.png'),
-  fromScope('icons/icon-192.png'),
-  fromScope('icons/icon-512.png'),
-  fromScope('images/gym-bg.svg')
+  fromScope('manifest.webmanifest?v=2'),
+  fromScope('manifest.json?v=2'),
+  fromScope('icons/favicon.png?v=2'),
+  fromScope('icons/icon-192.png?v=2'),
+  fromScope('icons/icon-512.png?v=2'),
+  fromScope('images/gym-bg.svg?v=2')
 ];
 
 self.addEventListener('install', (event) => {
