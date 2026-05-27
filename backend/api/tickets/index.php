@@ -43,7 +43,7 @@ if (!empty($_FILES['image']) && ($_FILES['image']['error'] ?? UPLOAD_ERR_NO_FILE
     ];
 }
 
-$subject = 'Ticket malfunzionamento - Palestra Fitness 360';
+$subject = 'Ticket malfunzionamento - AthleoDesk';
 $body = "Nuovo ticket ricevuto:\n\n";
 $body .= "Utente: {$user['full_name']}\n";
 $body .= "Email: {$user['email']}\n";

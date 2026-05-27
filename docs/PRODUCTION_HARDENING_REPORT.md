@@ -4,7 +4,7 @@ Data: 2026-05-14
 
 ## Obiettivo
 
-Stabilizzare Palestra Fitness 360 PWA per un uso reale su hosting Linux Aruba, senza aggiungere feature grandi o dipendenze esterne.
+Stabilizzare AthleoDesk PWA per un uso reale su hosting Linux Aruba, senza aggiungere feature grandi o dipendenze esterne.
 
 ## Problemi trovati e corretti
 

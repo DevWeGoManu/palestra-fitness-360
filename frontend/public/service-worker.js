@@ -1,4 +1,4 @@
-const CACHE_NAME = 'fitness-360-v4';
+const CACHE_NAME = 'athleodesk-v1';
 const scopeUrl = new URL(self.registration.scope);
 const scopePath = scopeUrl.pathname.endsWith('/') ? scopeUrl.pathname : `${scopeUrl.pathname}/`;
 const fromScope = (path) => `${scopePath}${path}`.replace(/\/{2,}/g, '/');
@@ -9,7 +9,6 @@ const APP_SHELL = [
   fromScope('icons/favicon.png'),
   fromScope('icons/icon-192.png'),
   fromScope('icons/icon-512.png'),
-  fromScope('images/logo.png'),
   fromScope('images/gym-bg.svg')
 ];
 

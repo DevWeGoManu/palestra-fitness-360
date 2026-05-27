@@ -1,7 +1,7 @@
 {
-  "name": "Palestra Fitness 360",
-  "short_name": "Fitness 360",
-  "description": "Gestione palestra, utenti e programmi di allenamento",
+  "name": "AthleoDesk",
+  "short_name": "AthleoDesk",
+  "description": "Gestione utenti e programmi di allenamento",
   "start_url": ".",
   "scope": ".",
   "display": "standalone",

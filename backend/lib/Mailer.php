@@ -13,7 +13,7 @@ function send_app_mail(string $to, string $subject, string $body): bool
 {
     $config = app_config();
     $from = $config['mail_from'] ?? 'noreply@localhost';
-    $fromName = $config['mail_from_name'] ?? 'Palestra Fitness 360';
+    $fromName = $config['mail_from_name'] ?? 'AthleoDesk';
     $safeFrom = filter_var($from, FILTER_VALIDATE_EMAIL) ? $from : 'noreply@localhost';
     $encodedSubject = '=?UTF-8?B?' . base64_encode($subject) . '?=';
     $headers = [
@@ -66,7 +66,7 @@ function send_app_mail_with_attachment(string $to, string $subject, string $body
 
     $config = app_config();
     $from = $config['mail_from'] ?? 'noreply@localhost';
-    $fromName = $config['mail_from_name'] ?? 'Palestra Fitness 360';
+    $fromName = $config['mail_from_name'] ?? 'AthleoDesk';
     $safeFrom = filter_var($from, FILTER_VALIDATE_EMAIL) ? $from : 'noreply@localhost';
     $encodedSubject = '=?UTF-8?B?' . base64_encode($subject) . '?=';
     $boundary = 'gym_ticket_' . bin2hex(random_bytes(16));
@@ -134,7 +134,7 @@ function send_verification_email(string $email, string $fullName, string $token)
     $link = rtrim($config['app_url'], '/') . '/#/verify-email?token=' . urlencode($token);
     send_app_mail(
         $email,
-        'Verifica email - Palestra Fitness 360',
+        'Verifica email - AthleoDesk',
         "Ciao $fullName,\n\nverifica la tua email aprendo questo link:\n$link\n\nIl link scade tra 24 ore."
     );
 }
@@ -145,7 +145,7 @@ function send_password_reset_email(string $email, string $fullName, string $toke
     $link = rtrim($config['app_url'], '/') . '/#/reset-password?token=' . urlencode($token);
     send_app_mail(
         $email,
-        'Reset password - Palestra Fitness 360',
+        'Reset password - AthleoDesk',
         "Ciao $fullName,\n\npuoi impostare una nuova password aprendo questo link:\n$link\n\nIl link scade tra 60 minuti."
     );
 }
@@ -160,7 +160,7 @@ function notify_admin_registration(string $fullName, string $email): void
 
     send_app_mail(
         $adminEmail,
-        'Nuovo utente registrato - Palestra Fitness 360',
+        'Nuovo utente registrato - AthleoDesk',
         "Nuovo utente registrato:\n\nNome: $fullName\nEmail: $email\n\nAccedi al pannello utenti per approvarlo."
     );
 }

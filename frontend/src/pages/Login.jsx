@@ -25,8 +25,7 @@ export function Login({ onLogin, notify }) {
   return (
     <main className="login-page">
       <form className="login-panel" onSubmit={submit}>
-        <div className="brand-mark"><img src={`${import.meta.env.BASE_URL}images/logo.png`} alt="" /></div>
-        <h1>Palestra Fitness 360</h1>
+        <h1>AthleoDesk</h1>
         <p className="login-subtitle">Area riservata per coach e atleti</p>
         <label>Email<input value={email} onChange={(e) => setEmail(e.target.value)} type="email" required /></label>
         <label>Password<input value={password} onChange={(e) => setPassword(e.target.value)} type="password" required minLength={1} /></label>

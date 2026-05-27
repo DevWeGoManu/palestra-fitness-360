@@ -9,6 +9,6 @@ return [
     'allowed_origins' => array_filter(array_map('trim', explode(',', getenv('ALLOWED_ORIGINS') ?: 'https://www.tuodominio.it'))),
     'session_ttl' => (int) (getenv('SESSION_TTL') ?: 3600),
     'mail_from' => getenv('MAIL_FROM') ?: 'info@tuodominio.it',
-    'mail_from_name' => getenv('MAIL_FROM_NAME') ?: 'Palestra Fitness 360',
+    'mail_from_name' => getenv('MAIL_FROM_NAME') ?: 'AthleoDesk',
     'admin_notify_email' => getenv('ADMIN_NOTIFY_EMAIL') ?: 'admin@tuodominio.it',
 ];

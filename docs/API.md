@@ -1,4 +1,4 @@
-# Palestra Fitness 360 API
+# AthleoDesk API
 
 Base URL development: `http://localhost:8000/api`.
 

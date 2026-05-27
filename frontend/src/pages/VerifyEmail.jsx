@@ -17,7 +17,6 @@ export function VerifyEmail({ token, notify }) {
   return (
     <main className="login-page">
       <div className="login-panel">
-        <div className="brand-mark"><img src={`${import.meta.env.BASE_URL}images/logo.png`} alt="" /></div>
         <h1>Verifica email</h1>
         <p className="empty">{message}</p>
         <button type="button" className="primary" onClick={() => go('/')}>Vai al login</button>

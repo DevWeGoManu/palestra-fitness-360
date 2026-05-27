@@ -23,7 +23,6 @@ export function ForgotPassword({ notify }) {
   return (
     <main className="login-page">
       <form className="login-panel" onSubmit={submit}>
-        <div className="brand-mark"><img src={`${import.meta.env.BASE_URL}images/logo.png`} alt="" /></div>
         <h1>Password dimenticata</h1>
         {message && <p className="empty">{message}</p>}
         <label>Email<input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required /></label>

@@ -60,7 +60,7 @@ return [
     'allowed_origins' => ['https://www.tuodominio.it'],
     'session_ttl' => 3600,
     'mail_from' => 'info@tuodominio.it',
-    'mail_from_name' => 'Palestra Fitness 360',
+    'mail_from_name' => 'AthleoDesk',
     'admin_notify_email' => 'admin@tuodominio.it',
 ];
 ```

@@ -6,7 +6,7 @@ import { canEditWorkouts, canManage, go } from '../utils/router.js';
 
 const emptyExercise = { name: '', sets: '', reps: '', weight: '', rest: '', notes: '', order_index: 1 };
 
-export function PlanEditor({ id, user, notify }) {
+export function PlanEditor({ id, user, notify, editMode = false }) {
   const [plan, setPlan] = useState(null);
   const [savedSnapshot, setSavedSnapshot] = useState('');
   const [users, setUsers] = useState([]);
@@ -22,7 +22,7 @@ export function PlanEditor({ id, user, notify }) {
   const [manualEditing, setManualEditing] = useState(false);
   const [editSnapshot, setEditSnapshot] = useState('');
   const [confirmDialog, setConfirmDialog] = useState(null);
-  const editable = canEditWorkouts(user);
+  const editable = canManage(user) || (editMode && canEditWorkouts(user));
   const canAssignAthletes = canManage(user);
   const showManualEditor = editable && manualEditing;
   const dirty = editable && plan && savedSnapshot && JSON.stringify(plan) !== savedSnapshot;
@@ -167,7 +167,7 @@ export function PlanEditor({ id, user, notify }) {
       setPlan(data.plan);
       setSavedSnapshot(JSON.stringify(data.plan));
       notify('Programma salvato');
-      go('/workouts');
+      go(canManage(user) ? '/workouts' : `/plan?id=${data.plan.id}`);
     } catch (err) {
       notify(err.message, 'error');
     }

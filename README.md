@@ -1,4 +1,4 @@
-# Palestra Fitness 360 PWA
+# AthleoDesk PWA
 
 Web-app responsive/PWA per gestione palestra con frontend React + Vite, backend PHP 8 e database MySQL. Il progetto non usa servizi esterni come Supabase o Firebase ed e pensato per hosting Linux tradizionale, incluso Aruba.
 
@@ -182,7 +182,7 @@ npm run dev
 
 ```php
 'mail_from' => 'info@tuodominio.it',
-'mail_from_name' => 'Palestra Fitness 360',
+'mail_from_name' => 'AthleoDesk',
 'admin_notify_email' => 'admin@tuodominio.it',
 ```
 

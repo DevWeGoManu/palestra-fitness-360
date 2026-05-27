@@ -16,8 +16,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $stmt = $pdo->prepare(
             'SELECT wp.id, wp.name, wp.assigned_user_id, ? AS assigned_user_name, wp.created_at
              FROM workout_plans wp
+             LEFT JOIN workout_days wd ON wd.workout_plan_id = wp.id
+             LEFT JOIN exercises e ON e.workout_day_id = wd.id
              WHERE wp.assigned_user_id = ?
-             ORDER BY wp.created_at DESC'
+             GROUP BY wp.id, wp.name, wp.assigned_user_id, wp.created_at
+             ORDER BY CASE WHEN COUNT(e.id) > 0 THEN 0 ELSE 1 END ASC, wp.created_at DESC, wp.id DESC'
         );
         $stmt->execute([$auth['full_name'], $auth['id']]);
     }

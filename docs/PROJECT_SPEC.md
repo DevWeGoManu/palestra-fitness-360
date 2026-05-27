@@ -1,4 +1,4 @@
-# Palestra Fitness 360 PWA - Documento tecnico rigenerabile
+# AthleoDesk PWA - Documento tecnico rigenerabile
 
 Questo documento descrive in modo completo il progetto realizzato, con un livello di dettaglio sufficiente per permettere a un altro AI engineer di rigenerarlo da zero in una nuova codebase.
 
@@ -460,7 +460,7 @@ frontend/public/manifest.json
 
 Definisce:
 
-- `name`: Palestra Fitness 360;
+- `name`: AthleoDesk;
 - `short_name`: Gym;
 - `display`: standalone;
 - colori PWA;
@@ -1823,7 +1823,7 @@ Frontend React:
 - Background login con asset locale SVG, non immagine remota.
 
 PWA:
-- `manifest.json` con name Palestra Fitness 360, short_name Fitness 360, display standalone.
+- `manifest.json` con name AthleoDesk, short_name AthleoDesk, display standalone.
 - `service-worker.js` con cache app shell e asset statici.
 - Non cacheare richieste `/api/`.
 - Registra service worker in `main.jsx`.

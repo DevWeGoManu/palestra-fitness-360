@@ -1,6 +1,6 @@
 # Staging Deploy Aruba
 
-Guida per il primo deploy reale di Palestra Fitness 360 PWA in ambiente staging su Aruba Linux.
+Guida per il primo deploy reale di AthleoDesk PWA in ambiente staging su Aruba Linux.
 
 ## Scelta ambiente staging
 

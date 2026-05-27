@@ -14,6 +14,7 @@ const UserDetail = lazy(() => import('./pages/UserDetail.jsx').then((module) => 
 const UsersPage = lazy(() => import('./pages/UsersPage.jsx').then((module) => ({ default: module.UsersPage })));
 const Workouts = lazy(() => import('./pages/Workouts.jsx').then((module) => ({ default: module.Workouts })));
 const Tickets = lazy(() => import('./pages/Tickets.jsx').then((module) => ({ default: module.Tickets })));
+const CreatePlan = lazy(() => import('./pages/CreatePlan.jsx').then((module) => ({ default: module.CreatePlan })));
 
 function App() {
   const [route, setRoute] = useState(routeFromHash());
@@ -39,7 +40,7 @@ function App() {
   }, []);
 
   if (loading) {
-    return <div className="splash"><img className="splash-logo" src={`${import.meta.env.BASE_URL}images/logo.png`} alt="" /> Caricamento</div>;
+    return <div className="splash"><strong>AthleoDesk</strong><span>Caricamento</span></div>;
   }
 
   if (!user && route.path === '/register') {
@@ -66,12 +67,20 @@ function App() {
           {route.path === '/' && canManage(user) && <Workouts user={user} notify={notify} />}
           {route.path === '/' && !canManage(user) && <Workouts user={user} notify={notify} />}
           {route.path === '/workouts' && <Workouts user={user} notify={notify} />}
+          {route.path === '/create-plan' && user.role === 'autonomo' && <CreatePlan user={user} notify={notify} />}
           {route.path === '/users' && canManage(user) && <UsersPage notify={notify} />}
           {route.path === '/tickets' && <Tickets notify={notify} />}
           {route.path === '/user' && (canManage(user) || Number(route.params.get('id')) === Number(user.id)) && (
             <UserDetail id={route.params.get('id')} currentUser={user} onUserUpdate={setUser} notify={notify} />
           )}
-          {route.path === '/plan' && <PlanEditor id={route.params.get('id')} user={user} notify={notify} />}
+          {route.path === '/plan' && (
+            <PlanEditor
+              id={route.params.get('id')}
+              user={user}
+              notify={notify}
+              editMode={route.params.get('edit') === '1'}
+            />
+          )}
         </Suspense>
       </Shell>
       <Toast toast={toast} onClose={() => setToast(null)} />

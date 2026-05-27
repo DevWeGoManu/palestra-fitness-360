@@ -1,6 +1,6 @@
 import React from 'react';
-import { CalendarDays, LifeBuoy, LogOut, Menu, UserCircle, Users, X } from 'lucide-react';
-import { canManage, go } from '../utils/router.js';
+import { CalendarDays, FilePlus2, LifeBuoy, LogOut, Menu, UserCircle, Users, X } from 'lucide-react';
+import { canManage, canSelfManageWorkouts, go } from '../utils/router.js';
 
 export function Shell({ user, onLogout, children }) {
   const [open, setOpen] = React.useState(false);
@@ -13,13 +13,14 @@ export function Shell({ user, onLogout, children }) {
       ]
     : [
         { href: '/workouts', label: 'Allenamenti', icon: CalendarDays },
+        ...(canSelfManageWorkouts(user) ? [{ href: '/create-plan', label: 'Crea scheda', icon: FilePlus2 }] : []),
         { href: `/user?id=${user.id}`, label: 'Profilo', icon: UserCircle }
       ];
 
   return (
     <div className="app-shell">
       <aside className={`sidebar ${open ? 'open' : ''}`}>
-        <div className="sidebar-head"><img src={`${import.meta.env.BASE_URL}images/logo.png`} alt="" /><strong>Palestra Fitness 360</strong></div>
+        <div className="sidebar-head"><strong>AthleoDesk</strong></div>
         <nav aria-label="Navigazione principale">
           {nav.map((item) => {
             const Icon = item.icon;

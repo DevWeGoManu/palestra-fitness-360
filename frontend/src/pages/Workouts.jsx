@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { CalendarDays, Plus, Trash2 } from 'lucide-react';
 import { api } from '../api.js';
 import { Loading } from '../components/Loading.jsx';
-import { canEditWorkouts, canManage, canSelfManageWorkouts, go } from '../utils/router.js';
+import { canManage, canSelfManageWorkouts, go } from '../utils/router.js';
 
 export function Workouts({ user, notify }) {
   const [plans, setPlans] = useState([]);
@@ -15,7 +15,7 @@ export function Workouts({ user, notify }) {
     try {
       const planData = await api.plans();
       setPlans(planData.plans);
-      if (!canEditWorkouts(user) && planData.plans.length > 0) {
+      if (!canManage(user) && planData.plans.length > 0) {
         go(`/plan?id=${planData.plans[0].id}`);
         return;
       }
@@ -73,11 +73,6 @@ export function Workouts({ user, notify }) {
           <button className="primary"><Plus size={18} /> Nuovo</button>
         </form>
       )}
-      {canSelfManageWorkouts(user) && (
-        <form className="toolbar compact-toolbar" onSubmit={createPlan}>
-          <button className="primary"><Plus size={18} /> Nuova scheda</button>
-        </form>
-      )}
       {loading ? <Loading /> : (
         <div className="list workout-list">
           {plans.map((plan) => (
@@ -90,7 +85,7 @@ export function Workouts({ user, notify }) {
                   <span className="workout-row-date">{new Date(plan.created_at).toLocaleDateString('it-IT')}</span>
                 </span>
               </span>
-              {canEditWorkouts(user) && (
+              {canManage(user) && (
                 <button className="ghost danger row-action" type="button" onClick={(event) => deletePlan(event, plan)}>
                   <Trash2 size={16} /> Elimina
                 </button>
@@ -100,7 +95,7 @@ export function Workouts({ user, notify }) {
           {plans.length === 0 && (
             <div className="empty empty-card">
               <strong>Nessun allenamento ancora</strong>
-              <span>{canEditWorkouts(user) ? 'Crea una nuova scheda per iniziare.' : 'Il tuo coach non ha ancora assegnato una scheda.'}</span>
+              <span>{canSelfManageWorkouts(user) ? 'Apri Crea scheda per iniziare.' : canManage(user) ? 'Crea una nuova scheda per iniziare.' : 'Il tuo coach non ha ancora assegnato una scheda.'}</span>
             </div>
           )}
         </div>

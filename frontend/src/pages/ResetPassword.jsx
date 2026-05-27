@@ -24,7 +24,6 @@ export function ResetPassword({ token, notify }) {
   return (
     <main className="login-page">
       <form className="login-panel" onSubmit={submit}>
-        <div className="brand-mark"><img src={`${import.meta.env.BASE_URL}images/logo.png`} alt="" /></div>
         <h1>Nuova password</h1>
         <label>Password<input type="password" minLength="8" value={password} onChange={(e) => setPassword(e.target.value)} required /></label>
         <label>Conferma password<input type="password" minLength="8" value={passwordConfirm} onChange={(e) => setPasswordConfirm(e.target.value)} required /></label>
