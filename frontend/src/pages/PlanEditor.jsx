@@ -19,6 +19,7 @@ export function PlanEditor({ id, user, notify, editMode = false }) {
   const [parserPreview, setParserPreview] = useState(null);
   const [parserLoading, setParserLoading] = useState(false);
   const [parserTargetDayNumber, setParserTargetDayNumber] = useState(1);
+  const [parserEditTarget, setParserEditTarget] = useState(null);
   const [manualEditing, setManualEditing] = useState(false);
   const [editSnapshot, setEditSnapshot] = useState('');
   const [confirmDialog, setConfirmDialog] = useState(null);
@@ -132,6 +133,34 @@ export function PlanEditor({ id, user, notify, editMode = false }) {
     });
   }
 
+  function copyDayToParser(day) {
+    copyBlocksToParser(day.exercises, day.day_number);
+    setParserEditTarget(null);
+  }
+
+  function copyExerciseToParser(exercise, day, dayIndex, blockIndex) {
+    setParserEditTarget({
+      dayId: day.id,
+      dayIndex,
+      dayNumber: Number(day.day_number),
+      blockId: exercise.id,
+      blockIndex,
+      type: isCircuitBlock(exercise) ? 'circuit' : 'exercise',
+      originalName: exercise.name || (isCircuitBlock(exercise) ? 'Circuito' : 'Blocco')
+    });
+    copyBlocksToParser([exercise], day.day_number);
+  }
+
+  function copyBlocksToParser(blocks, dayNumber) {
+    setParserText(serializeWorkoutBlocksToParserText(blocks));
+    setParserTargetDayNumber(Number(dayNumber || parserTargetDayNumber || 1));
+    setParserPreview(null);
+    window.requestAnimationFrame(() => {
+      document.querySelector('.parser-textarea')?.focus();
+      document.querySelector('.parser-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }
+
   function startManualEditing() {
     const normalizedPlan = normalizePlanForManualEditing(plan);
     setPlan(normalizedPlan);
@@ -231,14 +260,16 @@ export function PlanEditor({ id, user, notify, editMode = false }) {
     const parsedDays = getEffectiveParserDays();
     if (!parsedDays.length) return;
 
-    const action = mode === 'replace' ? 'sostituire' : 'aggiungere a';
+    const isReplace = mode === 'replace';
+    const isUpdate = mode === 'update';
+    const action = isReplace ? 'sostituire' : isUpdate ? 'aggiornare dentro' : 'aggiungere a';
     const dayNames = parsedDays.map((day) => formatDayTitle(day)).join(', ');
 
     requestConfirmation({
-      title: mode === 'replace' ? 'Sostituire i day trovati?' : 'Aggiungere alla scheda?',
+      title: isReplace ? 'Sostituire i day trovati?' : isUpdate ? 'Aggiornare i blocchi corrispondenti?' : 'Aggiungere alla scheda?',
       message: `Vuoi ${action} ${dayNames} nella scheda corrente? Dovrai comunque premere Salva per rendere definitive le modifiche.`,
-      confirmLabel: mode === 'replace' ? 'Sostituisci' : 'Aggiungi',
-      tone: mode === 'replace' ? 'danger' : 'default',
+      confirmLabel: isReplace ? 'Sostituisci' : isUpdate ? 'Aggiorna' : 'Aggiungi',
+      tone: isReplace ? 'danger' : 'default',
       onConfirm: () => applyParserDays(parsedDays, mode)
     });
   }
@@ -263,12 +294,7 @@ export function PlanEditor({ id, user, notify, editMode = false }) {
       return {
         ...day,
         title: parsed.title || day.title,
-        exercises: mode === 'replace'
-          ? parsedExercises
-          : [...day.exercises, ...parsedExercises.map((exercise, index) => ({
-              ...exercise,
-              order_index: day.exercises.length + index + 1
-            }))]
+        exercises: applyParsedExercisesToDay(day.exercises, parsedExercises, mode)
       };
     });
 
@@ -279,7 +305,75 @@ export function PlanEditor({ id, user, notify, editMode = false }) {
     if (firstDay) setActiveDayId(Number(firstDay.id));
     setParserPreview(null);
     setParserText('');
-    notify(mode === 'replace' ? 'Preview applicata: day sostituiti' : 'Preview applicata: esercizi aggiunti');
+    notify(mode === 'replace'
+      ? 'Preview applicata: day sostituiti'
+      : mode === 'update'
+        ? 'Preview applicata: blocchi aggiornati'
+        : 'Preview applicata: esercizi aggiunti');
+  }
+
+  function applyParserEditTargetPreview() {
+    const parsedDays = getEffectiveParserDays();
+    const replacement = getFirstParsedExerciseForTarget(parsedDays);
+
+    if (!parserEditTarget || !replacement) {
+      notify('Genera una preview valida prima di aggiornare il blocco', 'error');
+      return;
+    }
+
+    requestConfirmation({
+      title: 'Aggiornare questo blocco?',
+      message: `"${parserEditTarget.originalName}" verrà aggiornato direttamente. Gli altri blocchi del giorno resteranno invariati.`,
+      confirmLabel: 'Aggiorna blocco',
+      onConfirm: () => applyParserEditTargetBlock(replacement)
+    });
+  }
+
+  function getFirstParsedExerciseForTarget(parsedDays) {
+    const targetDayNumber = Number(parserEditTarget?.dayNumber || parserTargetDayNumber);
+    const parsedDay = parsedDays.find((day) => Number(day.day_number) === targetDayNumber) || parsedDays[0];
+    return parsedDay?.exercises?.flatMap((exercise) => expandParsedExercise(exercise))[0] || null;
+  }
+
+  function applyParserEditTargetBlock(replacement) {
+    let updated = false;
+    const days = plan.days.map((day, dayIndex) => {
+      const isTargetDay = parserEditTarget.dayId
+        ? Number(day.id) === Number(parserEditTarget.dayId)
+        : dayIndex === parserEditTarget.dayIndex;
+
+      if (!isTargetDay) return day;
+
+      const blockIndex = findParserEditTargetBlockIndex(day.exercises, parserEditTarget);
+      if (blockIndex < 0) return day;
+
+      updated = true;
+      const currentBlock = day.exercises[blockIndex];
+      const nextBlock = {
+        ...emptyExercise,
+        ...replacement,
+        id: currentBlock.id,
+        workout_day_id: currentBlock.workout_day_id,
+        order_index: currentBlock.order_index || blockIndex + 1,
+        athlete_note: currentBlock.athlete_note
+      };
+
+      return {
+        ...day,
+        exercises: day.exercises.map((exercise, index) => index === blockIndex ? nextBlock : exercise)
+      };
+    });
+
+    if (!updated) {
+      notify('Il blocco originale non è più disponibile', 'error');
+      return;
+    }
+
+    setPlan({ ...plan, days });
+    setParserEditTarget(null);
+    setParserPreview(null);
+    setParserText('');
+    notify('Blocco aggiornato dalla preview parser');
   }
 
   function requestConfirmation(options) {
@@ -297,7 +391,7 @@ export function PlanEditor({ id, user, notify, editMode = false }) {
       <div className="page-title row">
         <div>
           <h2>{showManualEditor ? <input className="title-input" value={plan.name} onChange={(e) => setPlan({ ...plan, name: e.target.value })} /> : plan.name}</h2>
-          <p>{plan.assigned_user_name}</p>
+          {normalizeExerciseName(plan.name) !== normalizeExerciseName(plan.assigned_user_name) && <p>{plan.assigned_user_name}</p>}
         </div>
       </div>
       {editable && (
@@ -347,6 +441,11 @@ export function PlanEditor({ id, user, notify, editMode = false }) {
                 {parserPreview.warnings.map((warning) => <span key={warning}>{warning}</span>)}
               </div>
             )}
+            {parserEditTarget && parserPreview?.days?.length > 0 && (
+              <div className="parser-edit-target-badge" aria-live="polite">
+                Stai modificando: {parserEditTarget.originalName || (parserEditTarget.type === 'circuit' ? 'Circuito' : 'Blocco')}
+              </div>
+            )}
             {!parserPreview?.days?.length && (
               <div className="parser-empty" aria-live="polite">
                 <FileText size={22} />
@@ -370,7 +469,7 @@ export function PlanEditor({ id, user, notify, editMode = false }) {
                       <div>
                         <strong>{formatDayTitle(parsedDay)}</strong>
                         <small>
-                          Sostituisci: {currentCount} esercizi attuali diventano {countExpandedExercises(parsedDay.exercises)}. Aggiungi: +{countExpandedExercises(parsedDay.exercises)} esercizi.
+                          Aggiorna: modifica solo i blocchi corrispondenti. Sostituisci: {currentCount} esercizi attuali diventano {countExpandedExercises(parsedDay.exercises)}.
                         </small>
                       </div>
                       <div className="parser-exercises">
@@ -402,6 +501,11 @@ export function PlanEditor({ id, user, notify, editMode = false }) {
                 <div className="parser-actions">
                   <button className="ghost" type="button" onClick={() => applyParserPreview('append')}>Aggiungi alla scheda</button>
                   <button className="ghost danger" type="button" onClick={() => applyParserPreview('replace')}>Sostituisci day trovati</button>
+                  {parserEditTarget ? (
+                    <button className="primary" type="button" onClick={applyParserEditTargetPreview}>Aggiorna questo blocco</button>
+                  ) : (
+                    <button className="ghost" type="button" onClick={() => applyParserPreview('update')}>Aggiorna blocchi corrispondenti</button>
+                  )}
                 </div>
               </div>
             )}
@@ -461,6 +565,7 @@ export function PlanEditor({ id, user, notify, editMode = false }) {
                   </div>
                   {manualEditing && <button className="ghost" onClick={cancelManualEditing}>Annulla</button>}
                   {!manualEditing && !dirty && <button className="ghost" onClick={startManualEditing}>Modifica</button>}
+                  <button className="ghost" type="button" onClick={() => copyDayToParser(day)} disabled={day.exercises.length === 0}>Copia nel parser</button>
                   {(manualEditing || dirty) && <button className="primary" onClick={save}>Salva</button>}
                 </div>
               </div>
@@ -482,8 +587,13 @@ export function PlanEditor({ id, user, notify, editMode = false }) {
                     onAthleteNoteBlur={!editable ? () => saveAthleteNote(exercise) : undefined}
                     actions={showManualEditor ? (
                       <div className="exercise-actions no-print">
+                        <button className="ghost" onClick={() => copyExerciseToParser(exercise, day, dayIndex, exerciseIndex)}>Modifica nel parser</button>
                         <button className="ghost" onClick={() => duplicateExercise(dayIndex, exerciseIndex)}>Duplica</button>
                         <button className="ghost danger" onClick={() => removeExercise(dayIndex, exerciseIndex)}>Rimuovi</button>
+                      </div>
+                    ) : editable ? (
+                      <div className="exercise-actions no-print">
+                        <button className="ghost" onClick={() => copyExerciseToParser(exercise, day, dayIndex, exerciseIndex)}>Modifica nel parser</button>
                       </div>
                     ) : null}
                   />
@@ -498,10 +608,18 @@ export function PlanEditor({ id, user, notify, editMode = false }) {
                       ))}
                     </div>
                     <input className="exercise-notes-input" placeholder={fieldLabel('notes')} value={exercise.notes || ''} onChange={(e) => updateExercise(dayIndex, exerciseIndex, { notes: e.target.value })} />
-                    <div className="exercise-actions no-print"><button className="ghost" onClick={() => duplicateExercise(dayIndex, exerciseIndex)}>Duplica</button><button className="ghost danger" onClick={() => removeExercise(dayIndex, exerciseIndex)}>Rimuovi</button></div>
+                    <div className="exercise-actions no-print"><button className="ghost" onClick={() => copyExerciseToParser(exercise, day, dayIndex, exerciseIndex)}>Modifica nel parser</button><button className="ghost" onClick={() => duplicateExercise(dayIndex, exerciseIndex)}>Duplica</button><button className="ghost danger" onClick={() => removeExercise(dayIndex, exerciseIndex)}>Rimuovi</button></div>
                   </div>
                 ) : editable ? (
-                  <ReadOnlyExercise exercise={exercise} key={`${day.id}-${exerciseIndex}`} />
+                  <ReadOnlyExercise
+                    exercise={exercise}
+                    key={`${day.id}-${exerciseIndex}`}
+                    actions={(
+                      <div className="exercise-actions no-print">
+                        <button className="ghost" onClick={() => copyExerciseToParser(exercise, day, dayIndex, exerciseIndex)}>Modifica nel parser</button>
+                      </div>
+                    )}
+                  />
                 ) : (
                   <div className="athlete-exercise" key={`${day.id}-${exerciseIndex}`}>
                     <div className="athlete-exercise-main">
@@ -601,9 +719,9 @@ function AthleteWorkoutGuide({ activeDay, completedDayId, position, total, onPre
   );
 }
 
-function ReadOnlyExercise({ exercise }) {
+function ReadOnlyExercise({ exercise, actions = null }) {
   if (isCircuitBlock(exercise)) {
-    return <CircuitBlockCard block={exercise} />;
+    return <CircuitBlockCard block={exercise} actions={actions} />;
   }
 
   return (
@@ -612,6 +730,7 @@ function ReadOnlyExercise({ exercise }) {
         <strong>{exercise.name}</strong>
         <CoachExerciseValues exercise={exercise} />
       </div>
+      {actions}
     </div>
   );
 }
@@ -650,6 +769,159 @@ function normalizePlanForManualEditing(plan) {
 
 function countExpandedExercises(exercises = []) {
   return exercises.reduce((total, exercise) => total + expandParsedExercise(exercise).length, 0);
+}
+
+function serializeWorkoutBlocksToParserText(blocks = []) {
+  return blocks
+    .map((block) => serializeWorkoutBlockToParserText(block))
+    .filter(Boolean)
+    .join('\n\n');
+}
+
+function serializeWorkoutBlockToParserText(block) {
+  if (isCircuitBlock(block)) return serializeCircuitBlockToParserText(block);
+  return serializeExerciseBlockToParserText(block);
+}
+
+function serializeCircuitBlockToParserText(block) {
+  const exercises = Array.isArray(block.exercises) ? block.exercises : [];
+  const lines = exercises
+    .map((exercise) => [formatParserValue(exercise.reps), exercise.name].filter(Boolean).join(' ').trim())
+    .filter(Boolean);
+
+  const rounds = formatParserValue(block.rounds || block.circuit_rounds || block.sets);
+  if (rounds) lines.push('', `x${rounds}`);
+
+  return lines.join('\n');
+}
+
+function serializeExerciseBlockToParserText(exercise) {
+  const lines = [];
+  if (exercise.name) lines.push(String(exercise.name).trim());
+
+  const detail = serializeExerciseDetailLine(exercise);
+  if (detail) lines.push(detail);
+
+  const notes = String(exercise.notes || '').trim();
+  if (notes) lines.push(notes);
+
+  return lines.join('\n');
+}
+
+function serializeExerciseDetailLine(exercise) {
+  const name = String(exercise.name || '').toLowerCase();
+  const sets = formatParserValue(exercise.sets);
+  const reps = formatParserValue(exercise.reps);
+  const weight = formatParserValue(exercise.weight);
+  const rest = formatParserValue(exercise.rest);
+  const parts = [];
+
+  if (name.includes('emom')) {
+    if (reps) parts.push(`${reps} al minuto`);
+    if (sets) parts.push(/^x/i.test(sets) ? sets : `x ${sets} minuti`);
+    return parts.join('\n');
+  }
+
+  if (sets && reps) {
+    parts.push(`${sets}x${reps}`);
+  } else if (sets) {
+    parts.push(`x${sets}`);
+  } else if (reps) {
+    parts.push(reps);
+  }
+
+  if (weight) parts.push(/^con\b/i.test(weight) ? weight : `con ${weight}`);
+  if (rest) parts.push(/^recupero\b/i.test(rest) ? rest : `recupero ${rest}`);
+
+  return parts.join(' ');
+}
+
+function formatParserValue(value) {
+  return String(value ?? '').trim();
+}
+
+function findParserEditTargetBlockIndex(exercises = [], target) {
+  if (!target) return -1;
+
+  if (target.blockId) {
+    const idIndex = exercises.findIndex((exercise) => Number(exercise.id) === Number(target.blockId));
+    if (idIndex >= 0) return idIndex;
+  }
+
+  return target.blockIndex >= 0 && target.blockIndex < exercises.length ? target.blockIndex : -1;
+}
+
+function applyParsedExercisesToDay(currentExercises = [], parsedExercises = [], mode) {
+  if (mode === 'replace') return parsedExercises;
+
+  if (mode !== 'update') {
+    return [
+      ...currentExercises,
+      ...parsedExercises.map((exercise, index) => ({
+        ...exercise,
+        order_index: currentExercises.length + index + 1
+      }))
+    ];
+  }
+
+  const nextExercises = currentExercises.map((exercise) => ({ ...exercise }));
+  const matchedIndexes = new Set();
+  const appendedExercises = [];
+
+  parsedExercises.forEach((parsedExercise) => {
+    const matchIndex = findMatchingExerciseIndex(nextExercises, parsedExercise, matchedIndexes);
+
+    if (matchIndex >= 0) {
+      const currentExercise = nextExercises[matchIndex];
+      nextExercises[matchIndex] = {
+        ...currentExercise,
+        ...parsedExercise,
+        id: currentExercise.id,
+        workout_day_id: currentExercise.workout_day_id,
+        order_index: currentExercise.order_index || matchIndex + 1,
+        athlete_note: currentExercise.athlete_note
+      };
+      matchedIndexes.add(matchIndex);
+      return;
+    }
+
+    appendedExercises.push({
+      ...parsedExercise,
+      order_index: nextExercises.length + appendedExercises.length + 1
+    });
+  });
+
+  return [...nextExercises, ...appendedExercises]
+    .map((exercise, index) => ({ ...exercise, order_index: index + 1 }));
+}
+
+function findMatchingExerciseIndex(exercises, parsedExercise, matchedIndexes) {
+  if (isCircuitBlock(parsedExercise)) {
+    const parsedName = normalizeExerciseName(parsedExercise.name);
+    const sameNameIndex = exercises.findIndex((exercise, index) => {
+      return !matchedIndexes.has(index)
+        && isCircuitBlock(exercise)
+        && parsedName
+        && normalizeExerciseName(exercise.name) === parsedName;
+    });
+
+    if (sameNameIndex >= 0) return sameNameIndex;
+
+    return exercises.findIndex((exercise, index) => !matchedIndexes.has(index) && isCircuitBlock(exercise));
+  }
+
+  const parsedName = normalizeExerciseName(parsedExercise.name);
+  if (!parsedName) return -1;
+
+  return exercises.findIndex((exercise, index) => {
+    return !matchedIndexes.has(index)
+      && !isCircuitBlock(exercise)
+      && normalizeExerciseName(exercise.name) === parsedName;
+  });
+}
+
+function normalizeExerciseName(name) {
+  return String(name || '').trim().toLowerCase().replace(/\s+/g, ' ');
 }
 
 function hasExerciseLoad(exercise) {

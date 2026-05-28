@@ -1765,7 +1765,7 @@ button:disabled {
   display: grid;
   gap: 16px;
   width: min(980px, 100%);
-  margin: 0 0 20px;
+  margin: 0 auto 20px;
   padding: 22px;
   border: 1px solid rgba(224, 211, 216, 0.88);
   border-radius: var(--radius-xl);
@@ -1880,6 +1880,17 @@ button:disabled {
   color: #92400e;
   font-size: var(--text-sm);
   font-weight: 600;
+}
+
+.parser-edit-target-badge {
+  justify-self: start;
+  padding: 7px 11px;
+  border: 1px solid rgba(13, 96, 88, 0.18);
+  border-radius: 999px;
+  background: rgba(13, 96, 88, 0.08);
+  color: #0d6058;
+  font-size: var(--text-xs);
+  font-weight: 650;
 }
 
 .parser-preview {
@@ -2007,6 +2018,8 @@ button:disabled {
 .days {
   display: grid;
   gap: 14px;
+  width: min(980px, 100%);
+  margin-inline: auto;
 }
 
 .current-plan-head {
@@ -2258,6 +2271,10 @@ button:disabled {
     radial-gradient(circle at 100% 0%, rgba(146, 20, 38, 0.045), transparent 18rem),
     linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, #fffafa 100%);
   box-shadow: var(--shadow-soft);
+}
+
+.print-scope .day {
+  padding-inline: 22px;
 }
 
 .day-head {
@@ -3117,6 +3134,10 @@ button:disabled {
     width: 100%;
     padding: 16px;
     border-radius: var(--radius-lg);
+  }
+
+  .print-scope .day {
+    padding-inline: 16px;
   }
 
   .parser-heading,
