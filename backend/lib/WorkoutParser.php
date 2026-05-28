@@ -75,6 +75,34 @@ function workout_parser_normalize_exercise_parts(array $parts): array
             continue;
         }
 
+        if ($normalized && workout_parser_is_round_multiplier_fragment($part)) {
+            $rounds = workout_parser_extract_round_multiplier($part);
+            $lastIndex = count($normalized) - 1;
+            $circuitItems = [];
+
+            while ($lastIndex >= 0 && workout_parser_is_leading_reps_exercise($normalized[$lastIndex])) {
+                array_unshift($circuitItems, $normalized[$lastIndex]);
+                $lastIndex--;
+            }
+
+            if (count($circuitItems) > 1 && $rounds !== '') {
+                array_splice(
+                    $normalized,
+                    $lastIndex + 1,
+                    count($circuitItems),
+                    [workout_parser_build_circuit_block($rounds, $circuitItems)]
+                );
+                continue;
+            }
+
+            if (count($circuitItems) === 1 && $rounds !== '') {
+                $normalized[$lastIndex + 1] .= ' x' . $rounds;
+                continue;
+            }
+
+            continue;
+        }
+
         if ($normalized && workout_parser_is_parameter_fragment($part)) {
             $lastIndex = count($normalized) - 1;
             $normalized[$lastIndex] .= ' ' . $part;
@@ -108,9 +136,37 @@ function workout_parser_strip_whatsapp_prefix(string $part): string
 function workout_parser_is_parameter_fragment(string $part): bool
 {
     return (bool) preg_match(
-        '/^(?:\d+\s*[xX]\s*\d+|(?:max|\d+)\s+(?:con|@)\s*\d+(?:[,.]\d+)?\s*' . WORKOUT_PARSER_WEIGHT_UNIT . '|(?:con|@)\s*\d+(?:[,.]\d+)?\s*' . WORKOUT_PARSER_WEIGHT_UNIT . '|recupero\b|rest\b)/iu',
+        '/^(?:\d+\s*[xX]\s*\d+|\d+\s+al\s+minuto\b|[xX]\s*(?:max|\d+)\s*(?:minuti|min|m)?\b|(?:max|\d+)\s+(?:con|@)\s*\d+(?:[,.]\d+)?\s*' . WORKOUT_PARSER_WEIGHT_UNIT . '|(?:con|@)\s*\d+(?:[,.]\d+)?\s*' . WORKOUT_PARSER_WEIGHT_UNIT . '|recupero\b|rest\b)/iu',
         $part
     );
+}
+
+function workout_parser_is_round_multiplier_fragment(string $part): bool
+{
+    return (bool) preg_match('/^[xX]\s*\d+\s*$/u', $part);
+}
+
+function workout_parser_extract_round_multiplier(string $part): string
+{
+    if (!preg_match('/^[xX]\s*(\d+)\s*$/u', $part, $match)) {
+        return '';
+    }
+
+    return $match[1];
+}
+
+function workout_parser_build_circuit_block(string $rounds, array $items): string
+{
+    return 'Circuito x' . $rounds . ': ' . implode(' | ', array_map(static fn (string $item): string => trim($item), $items));
+}
+
+function workout_parser_is_leading_reps_exercise(string $part): bool
+{
+    if (preg_match('/\b(?:serie|sets?|ripetizioni|reps?|rep|recupero|rest|rec|al\s+minuto|' . WORKOUT_PARSER_WEIGHT_UNIT . ')\b/iu', $part)) {
+        return false;
+    }
+
+    return (bool) preg_match('/^\d+\s+[\p{L}][\p{L}\p{N}\s\'-]{0,100}$/u', $part);
 }
 
 function workout_parser_split_day_sections(string $text): array
@@ -148,6 +204,21 @@ function workout_parser_parse_exercise_line(string $line): ?array
     $notes = '';
     $seriesMatchStart = null;
     $seriesMatchEnd = null;
+    $nameOverride = null;
+
+    if (preg_match('/^Circuito\s+[xX]\s*(\d+)\s*:\s*(.+)$/u', $original, $match)) {
+        return [
+            'type' => 'circuit',
+            'name' => 'Circuito',
+            'rounds' => (int) $match[1],
+            'exercises' => workout_parser_parse_circuit_items($match[2]),
+            'sets' => '',
+            'reps' => '',
+            'weight' => '',
+            'rest' => '',
+            'notes' => '',
+        ];
+    }
 
     if (preg_match('/\b(\d+)\s*(?:s|sec|secondi)\s*(?:per|x)\s*(\d+)\s*(?:serie|sets?)\b/iu', $original, $match)) {
         $reps = $match[1] . 's';
@@ -170,6 +241,22 @@ function workout_parser_parse_exercise_line(string $line): ?array
         if (preg_match('/^(?:s|sec|secondi)\b/i', $afterTrimmed)) {
             $reps .= 's';
         }
+    }
+
+    if ($sets === '' && $reps === '' && preg_match('/^(\d+)\s+([\p{L}][\p{L}\p{N}\s\'-]{0,100}?)(?:\s+[xX]\s*(\d+))?\s*$/u', $original, $match)) {
+        $reps = $match[1];
+        $nameOverride = trim($match[2]);
+        if (isset($match[3]) && $match[3] !== '') {
+            $sets = $match[3];
+        }
+    }
+
+    if ($reps === '' && preg_match('/\b(\d+)\s+al\s+minuto\b/iu', $original, $match)) {
+        $reps = $match[1];
+    }
+
+    if ($sets === '' && preg_match('/\b[xX]\s*(max|\d+)\s*(?:minuti|min|m)?\b/iu', $original, $match)) {
+        $sets = ucfirst(strtolower($match[1]));
     }
 
     if ($sets === '' && preg_match('/\b(\d+)\s*(?:serie|sets?)\b/iu', $original, $match)) {
@@ -211,7 +298,7 @@ function workout_parser_parse_exercise_line(string $line): ?array
         $rest = workout_parser_normalize_time_value($match[1], $match[2]);
     }
 
-    $name = workout_parser_extract_exercise_name($original);
+    $name = $nameOverride ?? workout_parser_extract_exercise_name($original);
     if ($weight === '' && $reps !== '' && !str_contains($reps, '/') && !str_ends_with($reps, 's') && workout_parser_looks_like_isometric_exercise($name)) {
         $reps .= 's';
     }
@@ -223,6 +310,7 @@ function workout_parser_parse_exercise_line(string $line): ?array
     }
 
     return [
+        'type' => 'exercise',
         'name' => $name,
         'sets' => $sets,
         'reps' => $reps,
@@ -282,6 +370,34 @@ function workout_parser_format_weighted_note_rows(array $schemes): array
     return $rows;
 }
 
+function workout_parser_parse_circuit_items(string $items): array
+{
+    $rows = array_filter(array_map(
+        static fn (string $item): string => clean_string($item, 120),
+        preg_split('/\s*\|\s*/u', $items) ?: []
+    ));
+
+    $parsed = [];
+
+    foreach ($rows as $row) {
+        if (!preg_match('/^(\d+)\s+(.+)$/u', $row, $match)) {
+            continue;
+        }
+
+        $name = clean_string($match[2], 160);
+        if ($name === '') {
+            continue;
+        }
+
+        $parsed[] = [
+            'name' => $name,
+            'reps' => (int) $match[1],
+        ];
+    }
+
+    return $parsed;
+}
+
 function workout_parser_extract_exercise_name(string $line): string
 {
     $patterns = [
@@ -290,6 +406,8 @@ function workout_parser_extract_exercise_name(string $line): string
         '/\b\d+\s*(?:serie|sets?)\s*(?:da|x|per)\s*\d+(?:\s*\/\s*\d+)?\b/iu',
         '/\b\d+\s*[xX]\s*\d+(?:\s*\/\s*\d+)?\s*(?:s|sec|secondi|[^\p{L}\p{N}\s])(?=\s|$|[,.;:])/iu',
         '/\b\d+\s*[xX]\s*\d+(?:\s*\/\s*\d+)?\b/u',
+        '/\b\d+\s+al\s+minuto\b/iu',
+        '/\b[xX]\s*(?:max|\d+)\s*(?:minuti|min|m)?\b/iu',
         '/\b\d+\s*(?:serie|sets?)\b/iu',
         '/\b\d+\s*(?:ripetizioni|reps?|rep)\b/iu',
         '/\b(?:max|\d+)\s+(?:con|@)\s*\d+(?:[,.]\d+)?\s*' . WORKOUT_PARSER_WEIGHT_UNIT . '\b/iu',

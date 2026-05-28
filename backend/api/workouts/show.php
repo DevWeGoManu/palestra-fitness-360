@@ -30,7 +30,7 @@ function load_plan(PDO $pdo, int $id, ?array $auth = null): ?array
     $plan['days'] = $days->fetchAll();
 
     $exercises = $pdo->prepare(
-        'SELECT id, workout_day_id, name, sets, reps, weight, rest, notes, order_index
+        'SELECT id, workout_day_id, block_type, name, sets, reps, weight, rest, notes, circuit_rounds, circuit_exercises, order_index
          FROM exercises
          WHERE workout_day_id IN (SELECT id FROM workout_days WHERE workout_plan_id = ?)
          ORDER BY order_index ASC, id ASC'
@@ -38,6 +38,7 @@ function load_plan(PDO $pdo, int $id, ?array $auth = null): ?array
     $exercises->execute([$id]);
     $byDay = [];
     foreach ($exercises->fetchAll() as $exercise) {
+        $exercise = normalize_exercise_for_response($exercise);
         $byDay[$exercise['workout_day_id']][] = $exercise;
     }
 
@@ -125,23 +126,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'PUT') {
         $deleteExercises->execute([$dayId]);
 
         $insertExercise = $pdo->prepare(
-            'INSERT INTO exercises (workout_day_id, name, sets, reps, weight, rest, notes, order_index)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+            'INSERT INTO exercises (workout_day_id, block_type, name, sets, reps, weight, rest, notes, circuit_rounds, circuit_exercises, order_index)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
         );
 
         foreach (($day['exercises'] ?? []) as $index => $exercise) {
-            $exerciseName = clean_string($exercise['name'] ?? '', 160);
+            $blockType = (($exercise['type'] ?? $exercise['block_type'] ?? 'exercise') === 'circuit') ? 'circuit' : 'exercise';
+            $exerciseName = clean_string($exercise['name'] ?? ($blockType === 'circuit' ? 'Circuito' : ''), 160);
             if ($exerciseName === '') {
                 continue;
             }
+            $circuitRounds = '';
+            $circuitExercises = null;
+            if ($blockType === 'circuit') {
+                $circuitRounds = clean_string($exercise['rounds'] ?? $exercise['circuit_rounds'] ?? $exercise['sets'] ?? '', 40);
+                $circuitExercises = normalize_circuit_exercises_for_storage($exercise['exercises'] ?? $exercise['circuit_exercises'] ?? []);
+                if ($circuitRounds === '' || !$circuitExercises) {
+                    continue;
+                }
+            }
             $insertExercise->execute([
                 $dayId,
+                $blockType,
                 $exerciseName,
-                clean_string($exercise['sets'] ?? '', 40),
-                clean_string($exercise['reps'] ?? '', 40),
-                clean_string($exercise['weight'] ?? '', 40),
-                clean_string($exercise['rest'] ?? '', 40),
-                clean_text($exercise['notes'] ?? '', 1000),
+                $blockType === 'exercise' ? clean_string($exercise['sets'] ?? '', 40) : '',
+                $blockType === 'exercise' ? clean_string($exercise['reps'] ?? '', 40) : '',
+                $blockType === 'exercise' ? clean_string($exercise['weight'] ?? '', 40) : '',
+                $blockType === 'exercise' ? clean_string($exercise['rest'] ?? '', 40) : '',
+                $blockType === 'exercise' ? clean_text($exercise['notes'] ?? '', 1000) : '',
+                $blockType === 'circuit' ? $circuitRounds : null,
+                $blockType === 'circuit' ? json_encode($circuitExercises, JSON_UNESCAPED_UNICODE) : null,
                 (int) ($exercise['order_index'] ?? $index + 1),
             ]);
         }
@@ -164,3 +178,78 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
 }
 
 json_response(['error' => 'Metodo non consentito'], 405);
+
+function normalize_exercise_for_response(array $exercise): array
+{
+    $type = ($exercise['block_type'] ?? 'exercise') === 'circuit' ? 'circuit' : 'exercise';
+    $exercise['type'] = $type;
+    unset($exercise['block_type']);
+
+    if ($type === 'circuit') {
+        $exercise['rounds'] = normalize_numeric_payload_value($exercise['circuit_rounds'] ?? '');
+        $decoded = json_decode((string) ($exercise['circuit_exercises'] ?? '[]'), true);
+        $exercise['exercises'] = is_array($decoded) ? normalize_circuit_exercises_for_response($decoded) : [];
+        $exercise['sets'] = '';
+        $exercise['reps'] = '';
+        $exercise['weight'] = '';
+        $exercise['rest'] = '';
+        $exercise['notes'] = '';
+    } else {
+        $exercise['rounds'] = '';
+        $exercise['exercises'] = [];
+    }
+
+    unset($exercise['circuit_rounds'], $exercise['circuit_exercises']);
+    return $exercise;
+}
+
+function normalize_circuit_exercises_for_storage(mixed $items): array
+{
+    if (!is_array($items)) {
+        return [];
+    }
+
+    $normalized = [];
+    foreach ($items as $item) {
+        if (!is_array($item)) {
+            continue;
+        }
+        $name = clean_string($item['name'] ?? '', 160);
+        $reps = clean_string($item['reps'] ?? '', 40);
+        if ($name === '' || $reps === '') {
+            continue;
+        }
+        $normalized[] = [
+            'name' => $name,
+            'reps' => normalize_numeric_payload_value($reps),
+        ];
+    }
+
+    return $normalized;
+}
+
+function normalize_circuit_exercises_for_response(array $items): array
+{
+    $normalized = [];
+    foreach ($items as $item) {
+        if (!is_array($item)) {
+            continue;
+        }
+        $name = clean_string($item['name'] ?? '', 160);
+        $reps = clean_string($item['reps'] ?? '', 40);
+        if ($name === '' || $reps === '') {
+            continue;
+        }
+        $normalized[] = [
+            'name' => $name,
+            'reps' => normalize_numeric_payload_value($reps),
+        ];
+    }
+    return $normalized;
+}
+
+function normalize_numeric_payload_value(mixed $value): int|string
+{
+    $clean = clean_string($value, 40);
+    return ctype_digit($clean) ? (int) $clean : $clean;
+}

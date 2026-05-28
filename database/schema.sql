@@ -39,12 +39,15 @@ CREATE TABLE workout_days (
 CREATE TABLE exercises (
     id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     workout_day_id INT UNSIGNED NOT NULL,
+    block_type ENUM('exercise', 'circuit') NOT NULL DEFAULT 'exercise',
     name VARCHAR(160) NOT NULL,
     sets VARCHAR(40) NULL,
     reps VARCHAR(40) NULL,
     weight VARCHAR(40) NULL,
     rest VARCHAR(40) NULL,
     notes TEXT NULL,
+    circuit_rounds VARCHAR(40) NULL,
+    circuit_exercises JSON NULL,
     order_index INT UNSIGNED NOT NULL DEFAULT 1,
     INDEX idx_exercises_day_order (workout_day_id, order_index),
     CONSTRAINT fk_exercises_day

@@ -4,7 +4,7 @@ import { api } from '../api.js';
 import { Loading } from '../components/Loading.jsx';
 import { canEditWorkouts, canManage, go } from '../utils/router.js';
 
-const emptyExercise = { name: '', sets: '', reps: '', weight: '', rest: '', notes: '', order_index: 1 };
+const emptyExercise = { type: 'exercise', name: '', sets: '', reps: '', weight: '', rest: '', notes: '', order_index: 1 };
 
 export function PlanEditor({ id, user, notify, editMode = false }) {
   const [plan, setPlan] = useState(null);
@@ -375,6 +375,9 @@ export function PlanEditor({ id, user, notify, editMode = false }) {
                       </div>
                       <div className="parser-exercises">
                         {parsedDay.exercises.map((exercise, index) => {
+                          if (isCircuitBlock(exercise)) {
+                            return <ParserCircuitBlock block={exercise} key={`${parsedDay.day_number}-${index}`} />;
+                          }
                           const hasStructuredNotes = getStructuredNoteRows(exercise.notes).length > 1;
                           return (
                             <div className={['parser-exercise', hasStructuredNotes ? 'parser-exercise-structured' : ''].filter(Boolean).join(' ')} key={`${parsedDay.day_number}-${index}`}>
@@ -470,7 +473,21 @@ export function PlanEditor({ id, user, notify, editMode = false }) {
                 </div>
               )}
               {day.exercises.map((exercise, exerciseIndex) => (
-                showManualEditor ? (
+                isCircuitBlock(exercise) ? (
+                  <CircuitBlockCard
+                    block={exercise}
+                    key={`${day.id}-${exerciseIndex}`}
+                    athleteNote={!editable ? exercise.athlete_note || '' : ''}
+                    onAthleteNoteChange={!editable ? (value) => updateExercise(dayIndex, exerciseIndex, { athlete_note: value }) : undefined}
+                    onAthleteNoteBlur={!editable ? () => saveAthleteNote(exercise) : undefined}
+                    actions={showManualEditor ? (
+                      <div className="exercise-actions no-print">
+                        <button className="ghost" onClick={() => duplicateExercise(dayIndex, exerciseIndex)}>Duplica</button>
+                        <button className="ghost danger" onClick={() => removeExercise(dayIndex, exerciseIndex)}>Rimuovi</button>
+                      </div>
+                    ) : null}
+                  />
+                ) : showManualEditor ? (
                   <div className="exercise" key={`${day.id}-${exerciseIndex}`}>
                     <div className="exercise-name-cell">
                       <input placeholder={fieldLabel('name')} value={exercise.name || ''} onChange={(e) => updateExercise(dayIndex, exerciseIndex, { name: e.target.value })} />
@@ -585,6 +602,10 @@ function AthleteWorkoutGuide({ activeDay, completedDayId, position, total, onPre
 }
 
 function ReadOnlyExercise({ exercise }) {
+  if (isCircuitBlock(exercise)) {
+    return <CircuitBlockCard block={exercise} />;
+  }
+
   return (
     <div className="athlete-exercise coach-preview-exercise">
       <div className="athlete-exercise-main">
@@ -596,6 +617,8 @@ function ReadOnlyExercise({ exercise }) {
 }
 
 function expandParsedExercise(exercise) {
+  if (isCircuitBlock(exercise)) return [normalizeCircuitBlock(exercise)];
+
   const rows = getStructuredNoteRows(exercise.notes);
   if (!rows.length) return [exercise];
 
@@ -630,6 +653,7 @@ function countExpandedExercises(exercises = []) {
 }
 
 function hasExerciseLoad(exercise) {
+  if (isCircuitBlock(exercise)) return false;
   return Boolean(exercise.sets || exercise.reps || exercise.weight || exercise.rest);
 }
 
@@ -649,6 +673,10 @@ function numericSortValue(value) {
 }
 
 function CoachExerciseValues({ exercise }) {
+  if (isCircuitBlock(exercise)) {
+    return <CircuitSummary block={exercise} />;
+  }
+
   const structuredRows = getStructuredNoteRows(exercise.notes);
 
   if (structuredRows.length > 1) {
@@ -674,6 +702,70 @@ function CoachExerciseValues({ exercise }) {
       {exercise.notes && <span className="exercise-note"><small>Note coach</small>{exercise.notes}</span>}
     </div>
   );
+}
+
+function ParserCircuitBlock({ block }) {
+  return (
+    <div className="parser-exercise parser-circuit-block">
+      <div className="circuit-block-label">Circuito &middot; {block.rounds || '-'} giri</div>
+      <CircuitSummary block={block} />
+    </div>
+  );
+}
+
+function CircuitBlockCard({ block, actions = null, athleteNote = '', onAthleteNoteChange, onAthleteNoteBlur }) {
+  return (
+    <div className={['athlete-exercise', 'circuit-block-card', !onAthleteNoteChange ? 'coach-preview-exercise' : ''].filter(Boolean).join(' ')}>
+      <div className="athlete-exercise-main">
+        <div className="circuit-block-label">Circuito &middot; {block.rounds || '-'} giri</div>
+        <CircuitSummary block={block} />
+      </div>
+      {actions}
+      {onAthleteNoteChange && (
+        <textarea
+          aria-label="Note atleta per circuito"
+          placeholder="Annota sensazioni, tempi o varianti del circuito"
+          value={athleteNote}
+          onChange={(event) => onAthleteNoteChange(event.target.value)}
+          onBlur={onAthleteNoteBlur}
+        />
+      )}
+    </div>
+  );
+}
+
+function CircuitSummary({ block }) {
+  const items = Array.isArray(block.exercises) ? block.exercises : [];
+
+  return (
+    <div className="circuit-items">
+      {items.map((item, index) => (
+        <div className="circuit-item" key={`${item.name}-${item.reps}-${index}`}>
+          <span>{item.reps} ×</span>
+          <strong>{item.name}</strong>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function isCircuitBlock(exercise) {
+  return exercise?.type === 'circuit';
+}
+
+function normalizeCircuitBlock(exercise) {
+  return {
+    ...exercise,
+    type: 'circuit',
+    name: exercise.name || 'Circuito',
+    rounds: normalizeNumericValue(exercise.rounds || exercise.circuit_rounds || exercise.sets || ''),
+    exercises: Array.isArray(exercise.exercises) ? exercise.exercises : []
+  };
+}
+
+function normalizeNumericValue(value) {
+  const clean = String(value || '').trim();
+  return /^\d+$/.test(clean) ? Number(clean) : clean;
 }
 
 function StructuredParserNotes({ notes }) {

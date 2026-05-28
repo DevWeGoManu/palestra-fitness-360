@@ -153,6 +153,29 @@ parser_test_assert_equals('Front lever pull up agli anelli in tuck', $days[0]['e
 parser_test_assert_equals('8/10', $days[0]['exercises'][1]['reps'] ?? null, 'mobile whatsapp date-first rep range');
 parser_test_assert_equals('HSPU al muro mani su paralleline rosse', $days[0]['exercises'][2]['name'] ?? null, 'mobile whatsapp date-first hspu name');
 
+[$days] = workout_parser_parse_text("[17:42, 27/05/2026] Istruttore Palestra CRM: 1 Mu\n12 Bar Dip\n8 Pull Up\n\nx4\n[17:43, 27/05/2026] Istruttore Palestra CRM: Push up emom\n18 al minuto\nx Max minuti\n[17:43, 27/05/2026] Istruttore Palestra CRM: Squat HB\n3x10 con 60kg");
+$exercises = $days[0]['exercises'] ?? [];
+parser_test_assert_equals(3, count($exercises), 'whatsapp circuit emom count');
+parser_test_assert_equals('circuit', $exercises[0]['type'] ?? null, 'whatsapp circuit block type');
+parser_test_assert_equals('Circuito', $exercises[0]['name'] ?? null, 'whatsapp circuit block name');
+parser_test_assert_equals(4, $exercises[0]['rounds'] ?? null, 'whatsapp circuit block rounds');
+parser_test_assert_equals('', $exercises[0]['sets'] ?? null, 'whatsapp circuit block sets empty');
+parser_test_assert_equals('', $exercises[0]['reps'] ?? null, 'whatsapp circuit block reps empty');
+parser_test_assert_equals([
+    ['name' => 'Mu', 'reps' => 1],
+    ['name' => 'Bar Dip', 'reps' => 12],
+    ['name' => 'Pull Up', 'reps' => 8],
+], $exercises[0]['exercises'] ?? null, 'whatsapp circuit block exercises');
+parser_test_assert_equals('', $exercises[0]['notes'] ?? null, 'whatsapp circuit block notes empty');
+parser_test_assert_equals('exercise', $exercises[1]['type'] ?? null, 'whatsapp emom type');
+parser_test_assert_equals('Push up emom', $exercises[1]['name'] ?? null, 'whatsapp emom name');
+parser_test_assert_equals('Max', $exercises[1]['sets'] ?? null, 'whatsapp emom sets');
+parser_test_assert_equals('18', $exercises[1]['reps'] ?? null, 'whatsapp emom reps');
+parser_test_assert_equals('Squat HB', $exercises[2]['name'] ?? null, 'whatsapp squat name');
+parser_test_assert_equals('3', $exercises[2]['sets'] ?? null, 'whatsapp squat sets');
+parser_test_assert_equals('10', $exercises[2]['reps'] ?? null, 'whatsapp squat reps');
+parser_test_assert_equals('60kg', $exercises[2]['weight'] ?? null, 'whatsapp squat weight');
+
 if ($failures) {
     echo "WorkoutParserTest FAILED\n";
     foreach ($failures as $failure) {
