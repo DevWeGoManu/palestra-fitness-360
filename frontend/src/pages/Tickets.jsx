@@ -53,12 +53,12 @@ export function Tickets({ notify }) {
 
   return (
     <section className="page">
-      <div className="page-title ticket-title">
-        <span className="ticket-title-icon"><TicketCheck size={22} /></span>
+      <div className="page-title row ticket-title">
         <div>
           <h2>Ticket</h2>
           <p>Segnala un malfunzionamento del sito.</p>
         </div>
+        <span className="ticket-title-icon"><TicketCheck size={22} /></span>
       </div>
 
       <form className="ticket-panel" onSubmit={submit}>

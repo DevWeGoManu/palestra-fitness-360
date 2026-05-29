@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Search } from 'lucide-react';
+import { Search, X } from 'lucide-react';
 import { api } from '../api.js';
 import { Loading } from '../components/Loading.jsx';
 import { go } from '../utils/router.js';
@@ -22,8 +22,8 @@ export function UsersPage({ notify }) {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('');
-  const [searchInput, setSearchInput] = useState('');
-  const [search, setSearch] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
 
   async function load() {
     setLoading(true);
@@ -38,24 +38,28 @@ export function UsersPage({ notify }) {
   }
 
   useEffect(() => { load(); }, []);
-
-  function applySearch(event) {
-    event.preventDefault();
-    setSearch(searchInput.trim().toLowerCase());
-  }
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => setDebouncedSearchQuery(searchQuery.trim().toLowerCase()), 280);
+    return () => window.clearTimeout(timeoutId);
+  }, [searchQuery]);
 
   const filteredUsers = users.filter((item) => {
     const matchesStatus = !statusFilter || item.status === statusFilter;
-    const haystack = `${item.full_name} ${item.email} ${item.role} ${item.status}`.toLowerCase();
-    const matchesSearch = !search || haystack.includes(search);
+    const haystack = `${item.full_name} ${item.email} ${item.role}`.toLowerCase();
+    const matchesSearch = !debouncedSearchQuery || haystack.includes(debouncedSearchQuery);
     return matchesStatus && matchesSearch;
   });
 
   return (
     <section className="page">
-      <div className="page-title">
-        <h2>Utenti</h2>
-        <p>Gestisci profili, status e programmazione degli atleti.</p>
+      <div className="page-title row">
+        <div>
+          <h2>Utenti</h2>
+          <p>Gestisci profili, status e programmazione degli atleti.</p>
+        </div>
+        <div className="users-summary" aria-live="polite">
+          {loading ? 'Caricamento utenti…' : `${filteredUsers.length} su ${users.length} utenti`}
+        </div>
       </div>
 
       <div className="users-controls">
@@ -73,16 +77,24 @@ export function UsersPage({ notify }) {
           ))}
         </div>
 
-        <form className="users-search" onSubmit={applySearch}>
+        <div className="users-search" role="search">
           <label className="sr-only" htmlFor="users-search">Cerca utenti</label>
-          <input
-            id="users-search"
-            placeholder="Cerca per nome, email o ruolo"
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-          />
-          <button className="primary" type="submit"><Search size={18} /> Cerca</button>
-        </form>
+          <div className="users-search-field">
+            <Search size={17} aria-hidden="true" />
+            <input
+              id="users-search"
+              placeholder="Cerca per nome, email o ruolo"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+            {searchQuery && (
+              <button className="users-search-clear" type="button" onClick={() => setSearchQuery('')} aria-label="Pulisci ricerca">
+                <X size={15} />
+              </button>
+            )}
+          </div>
+          {searchQuery && <button className="ghost" type="button" onClick={() => setSearchQuery('')}>Pulisci</button>}
+        </div>
       </div>
 
       {loading ? <Loading /> : (

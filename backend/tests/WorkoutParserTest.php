@@ -29,6 +29,25 @@ function parser_test_exercises(string $input): array
     return $days[0]['exercises'] ?? [];
 }
 
+function parser_test_assert_circuit_rest_case(string $input, string $expectedRest, string $label): void
+{
+    $exercises = parser_test_exercises($input);
+    parser_test_assert_equals(1, count($exercises), $label . ' count');
+    parser_test_assert_equals('circuit', $exercises[0]['type'] ?? null, $label . ' type');
+    parser_test_assert_equals(4, $exercises[0]['rounds'] ?? null, $label . ' rounds');
+    parser_test_assert_equals($expectedRest, $exercises[0]['rest'] ?? null, $label . ' rest');
+    parser_test_assert_equals([
+        ['name' => 'push up', 'reps' => 10],
+        ['name' => 'burpees', 'reps' => 5],
+        ['name' => 'pull up', 'reps' => 10],
+    ], $exercises[0]['exercises'] ?? null, $label . ' exercises');
+
+    $names = array_map(static fn (array $exercise): string => strtolower((string) ($exercise['name'] ?? '')), $exercises);
+    parser_test_assert_equals(false, in_array('recupero', $names, true), $label . ' no recupero exercise');
+    parser_test_assert_equals(false, in_array('un serie', $names, true), $label . ' no un serie exercise');
+    parser_test_assert_equals(false, in_array('3 minuti', $names, true), $label . ' no 3 minuti exercise');
+}
+
 [$days] = workout_parser_parse_text('');
 parser_test_assert_equals([], $days, 'empty input returns no days');
 
@@ -175,6 +194,74 @@ parser_test_assert_equals('Squat HB', $exercises[2]['name'] ?? null, 'whatsapp s
 parser_test_assert_equals('3', $exercises[2]['sets'] ?? null, 'whatsapp squat sets');
 parser_test_assert_equals('10', $exercises[2]['reps'] ?? null, 'whatsapp squat reps');
 parser_test_assert_equals('60kg', $exercises[2]['weight'] ?? null, 'whatsapp squat weight');
+
+$exercise = parser_test_first_exercise("Circuito x 4 con:\n1 km corsa,\n10 burpees,\n10 push up");
+parser_test_assert_equals('circuit', $exercise['type'] ?? null, 'natural circuit x type');
+parser_test_assert_equals(4, $exercise['rounds'] ?? null, 'natural circuit x rounds');
+parser_test_assert_equals([
+    ['name' => 'corsa', 'reps' => '1 km'],
+    ['name' => 'burpees', 'reps' => 10],
+    ['name' => 'push up', 'reps' => 10],
+], $exercise['exercises'] ?? null, 'natural circuit x exercises');
+
+$exercise = parser_test_first_exercise("Fai un circuito per 4 giri con:\n* 1km di corsa\n* 10 push up\n* 10 squat\nCon 1 minuto di recupero a fine circuito.");
+parser_test_assert_equals('circuit', $exercise['type'] ?? null, 'friendly circuit type');
+parser_test_assert_equals(4, $exercise['rounds'] ?? null, 'friendly circuit rounds');
+parser_test_assert_equals('1 minuto', $exercise['rest'] ?? null, 'friendly circuit rest');
+parser_test_assert_equals([
+    ['name' => 'corsa', 'reps' => '1 km'],
+    ['name' => 'push up', 'reps' => 10],
+    ['name' => 'squat', 'reps' => 10],
+], $exercise['exercises'] ?? null, 'friendly circuit exercises');
+
+$exercise = parser_test_first_exercise("Circuito 4 giri:\n1 Mu\n12 Bar Dip\n8 Pull Up");
+parser_test_assert_equals('circuit', $exercise['type'] ?? null, 'natural circuit giri type');
+parser_test_assert_equals(4, $exercise['rounds'] ?? null, 'natural circuit giri rounds');
+parser_test_assert_equals([
+    ['name' => 'Mu', 'reps' => 1],
+    ['name' => 'Bar Dip', 'reps' => 12],
+    ['name' => 'Pull Up', 'reps' => 8],
+], $exercise['exercises'] ?? null, 'natural circuit giri exercises');
+
+$exercise = parser_test_first_exercise("4 giri di:\n1 km corsa\n10 burpees\n10 push up\nrecupero 1 minuto alla fine");
+parser_test_assert_equals('circuit', $exercise['type'] ?? null, 'leading rounds circuit type');
+parser_test_assert_equals(4, $exercise['rounds'] ?? null, 'leading rounds circuit rounds');
+parser_test_assert_equals('1 minuto', $exercise['rest'] ?? null, 'leading rounds circuit rest');
+parser_test_assert_equals([
+    ['name' => 'corsa', 'reps' => '1 km'],
+    ['name' => 'burpees', 'reps' => 10],
+    ['name' => 'push up', 'reps' => 10],
+], $exercise['exercises'] ?? null, 'leading rounds circuit exercises');
+
+parser_test_assert_circuit_rest_case(
+    'circuito 4 giri 10 push up 5 burpees 10 pull up recupero 3 minuti',
+    '3 minuti',
+    'inline circuit rest'
+);
+
+parser_test_assert_circuit_rest_case(
+    "Crea un circuito di 4 giri con i seguenti esercizi:\n* 10 push up\n* 5 burpees\n* 10 pull up\n  con un recupero di 3 minuti per serie",
+    '3 minuti',
+    'real circuit rest per serie'
+);
+
+parser_test_assert_circuit_rest_case(
+    "Circuito 4 giri:\n10 push up\n5 burpees\n10 pull up\nrecupero 3 minuti per giro",
+    '3 minuti',
+    'circuit rest per giro'
+);
+
+parser_test_assert_circuit_rest_case(
+    "Circuito 4 giri:\n10 push up\n5 burpees\n10 pull up\nrecupero 3 minuti per round",
+    '3 minuti',
+    'circuit rest per round'
+);
+
+parser_test_assert_circuit_rest_case(
+    "Circuito 4 giri:\n10 push up\n5 burpees\n10 pull up\nrecupero 3 minuti alla fine",
+    '3 minuti',
+    'circuit rest finale'
+);
 
 if ($failures) {
     echo "WorkoutParserTest FAILED\n";

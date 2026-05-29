@@ -24,6 +24,7 @@ tmp_cookie.txt
 
 # Build outputs
 frontend/dist/
+frontend/test-results/
 release-aruba/
 release-aruba.zip
 

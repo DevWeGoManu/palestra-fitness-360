@@ -68,10 +68,69 @@ function workout_parser_normalize_text(string $text): string
 function workout_parser_normalize_exercise_parts(array $parts): array
 {
     $normalized = [];
+    $cleanParts = [];
 
     foreach ($parts as $part) {
         $part = workout_parser_strip_leading_marker(clean_string($part, 500));
         if ($part === '') {
+            continue;
+        }
+        $cleanParts[] = $part;
+    }
+
+    $count = count($cleanParts);
+    for ($index = 0; $index < $count; $index++) {
+        $part = $cleanParts[$index];
+
+        $inlineCircuit = workout_parser_parse_inline_natural_circuit($part);
+        if ($inlineCircuit !== null) {
+            $normalized[] = workout_parser_build_circuit_block(
+                $inlineCircuit['rounds'],
+                $inlineCircuit['items'],
+                $inlineCircuit['rest']
+            );
+            continue;
+        }
+
+        $naturalCircuitRounds = workout_parser_extract_natural_circuit_rounds($part);
+        if ($naturalCircuitRounds !== '') {
+            $circuitItems = [];
+            $circuitRest = '';
+            $lookahead = $index + 1;
+
+            while ($lookahead < $count) {
+                $candidate = $cleanParts[$lookahead];
+                $rest = workout_parser_extract_circuit_rest_fragment($candidate);
+
+                if ($rest !== '') {
+                    if ($circuitRest === '') {
+                        $circuitRest = $rest;
+                    }
+                    $lookahead++;
+                    continue;
+                }
+
+                if (workout_parser_is_circuit_item_fragment($candidate)) {
+                    $circuitItems[] = $candidate;
+                    $lookahead++;
+                    continue;
+                }
+
+                break;
+            }
+
+            if (count($circuitItems) > 1) {
+                $normalized[] = workout_parser_build_circuit_block($naturalCircuitRounds, $circuitItems, $circuitRest);
+                $index = $lookahead - 1;
+                continue;
+            }
+        }
+
+        if (workout_parser_is_rest_only_fragment($part)) {
+            if ($normalized) {
+                $lastIndex = count($normalized) - 1;
+                $normalized[$lastIndex] .= ' recupero ' . workout_parser_extract_circuit_rest_fragment($part);
+            }
             continue;
         }
 
@@ -155,9 +214,142 @@ function workout_parser_extract_round_multiplier(string $part): string
     return $match[1];
 }
 
-function workout_parser_build_circuit_block(string $rounds, array $items): string
+function workout_parser_extract_natural_circuit_rounds(string $part): string
 {
-    return 'Circuito x' . $rounds . ': ' . implode(' | ', array_map(static fn (string $item): string => trim($item), $items));
+    $part = trim($part, " \t\n\r\0\x0B-:.");
+
+    if (preg_match('/^(?:crea\s+un\s+|fai\s+un\s+)?circuito\s+(?:di|per)?\s*[xX]?\s*(\d+)\s*(?:giri|rounds?|serie)?(?:\s+con(?:\s+i\s+seguenti\s+esercizi)?)?\s*$/iu', $part, $match)) {
+        return $match[1];
+    }
+
+    if (preg_match('/^(\d+)\s*giri\s*(?:di|con)?\s*$/iu', $part, $match)) {
+        return $match[1];
+    }
+
+    return '';
+}
+
+function workout_parser_parse_inline_natural_circuit(string $part): ?array
+{
+    $part = trim($part);
+    $patterns = [
+        '/^(?:crea\s+un\s+|fai\s+un\s+)?circuito\s+(?:di|per)?\s*[xX]?\s*(\d+)\s*(?:giri|rounds?|serie)?(?:\s+con(?:\s+i\s+seguenti\s+esercizi)?)?\s*:?\s+(.+)$/iu',
+        '/^(\d+)\s*giri\s*(?:di|con)?\s*:?\s+(.+)$/iu',
+    ];
+
+    foreach ($patterns as $pattern) {
+        if (!preg_match($pattern, $part, $match)) {
+            continue;
+        }
+
+        $tail = clean_string($match[2] ?? '', 500);
+        $rest = workout_parser_extract_circuit_rest_fragment($tail);
+        $tail = workout_parser_remove_circuit_rest_fragment($tail);
+        $items = workout_parser_extract_circuit_items_from_text($tail);
+
+        if (count($items) > 1) {
+            return [
+                'rounds' => $match[1],
+                'items' => $items,
+                'rest' => $rest,
+            ];
+        }
+    }
+
+    return null;
+}
+
+function workout_parser_extract_circuit_rest_fragment(string $part): string
+{
+    if (preg_match('/\b(?:con\s+)?(?:un\s+)?(?:recupero|rest|rec\.?)\s*(?:di\s*)?(\d+)\s*(minuto|minuti|min|m|secondi|sec|s)\b/iu', $part, $match)
+        || preg_match('/\b(?:con\s+)?(?:un\s+)?(?:recupero|rest|rec\.?)\s*(?:di\s*)?(\d+)\s*([\'’])/iu', $part, $match)) {
+        return workout_parser_format_circuit_rest($match[1], $match[2]);
+    }
+
+    if (preg_match('/\b(?:con\s*)?(\d+)\s*(minuto|minuti|min|m|secondi|sec|s)\s*(?:di\s*)?(?:recupero|rest)\b/iu', $part, $match)
+        || preg_match('/\b(?:con\s*)?(\d+)\s*([\'’])\s*(?:di\s*)?(?:recupero|rest)\b/iu', $part, $match)) {
+        return workout_parser_format_circuit_rest($match[1], $match[2]);
+    }
+
+    return '';
+}
+
+function workout_parser_remove_circuit_rest_fragment(string $part): string
+{
+    $patterns = [
+        '/\b(?:con\s+)?(?:un\s+)?(?:recupero|rest|rec\.?)\s*(?:di\s*)?\d+\s*(?:minuto|minuti|min|m|secondi|sec|s|[\'’])\b(?:\s*(?:per|a|alla|al)\s+(?:giro|round|serie|fine|fine\s+circuito))?/iu',
+        '/\b(?:con\s+)?(?:un\s+)?(?:recupero|rest|rec\.?)\s*(?:di\s*)?\d+\s*[\'’](?:\s*(?:per|a|alla|al)\s+(?:giro|round|serie|fine|fine\s+circuito))?/iu',
+        '/\b(?:con\s*)?\d+\s*(?:minuto|minuti|min|m|secondi|sec|s|[\'’])\s*(?:di\s*)?(?:recupero|rest)\b(?:\s*(?:per|a|alla|al)\s+(?:giro|round|serie|fine|fine\s+circuito))?/iu',
+        '/\b(?:con\s*)?\d+\s*[\'’]\s*(?:di\s*)?(?:recupero|rest)\b(?:\s*(?:per|a|alla|al)\s+(?:giro|round|serie|fine|fine\s+circuito))?/iu',
+    ];
+    $part = preg_replace($patterns, ' ', $part) ?? $part;
+    $part = preg_replace('/\s+/u', ' ', $part) ?? $part;
+    return trim($part, " \t\n\r\0\x0B,;:.");
+}
+
+function workout_parser_is_rest_only_fragment(string $part): bool
+{
+    if (workout_parser_extract_circuit_rest_fragment($part) === '') {
+        return false;
+    }
+
+    $remaining = workout_parser_remove_circuit_rest_fragment($part);
+    $remaining = preg_replace('/\b(?:con|un|una|di|per|a|al|alla|fine|circuito|giro|round|serie)\b/iu', ' ', $remaining) ?? $remaining;
+    $remaining = preg_replace('/\s+/u', ' ', $remaining) ?? $remaining;
+    return trim($remaining, " \t\n\r\0\x0B,;:.") === '';
+}
+
+function workout_parser_format_circuit_rest(string $value, string $unit): string
+{
+    $unit = strtolower($unit);
+    if (in_array($unit, ['minuto', 'minuti'], true)) {
+        return $value . ' ' . ((int) $value === 1 ? 'minuto' : 'minuti');
+    }
+
+    if ($unit === 'secondi') {
+        return $value . ' secondi';
+    }
+
+    if (in_array($unit, ["'", '’'], true)) {
+        return $value . "'";
+    }
+
+    return $value . $unit;
+}
+
+function workout_parser_is_circuit_item_fragment(string $part): bool
+{
+    if (workout_parser_extract_circuit_rest_fragment($part) !== '') {
+        return false;
+    }
+
+    if (preg_match('/\b(?:serie|sets?|ripetizioni|reps?|rep|recupero|rest|rec|al\s+minuto|' . WORKOUT_PARSER_WEIGHT_UNIT . ')\b/iu', $part)) {
+        return false;
+    }
+
+    return (bool) preg_match('/^\d+\s*(?:km|m|metri|metro)?\s*(?:di\s+)?[\p{L}][\p{L}\p{N}\s\'-]{0,100}$/iu', $part);
+}
+
+function workout_parser_extract_circuit_items_from_text(string $text): array
+{
+    $text = workout_parser_remove_circuit_rest_fragment($text);
+    $text = preg_replace('/\s*[,;]\s*/u', ' ', $text) ?? $text;
+    preg_match_all(
+        '/\d+\s*(?:km|m|metri|metro)?\s*(?:di\s+)?[^\d,;:]+?(?=\s+\d+\s*(?:km|m|metri|metro)?\s|$)/iu',
+        $text,
+        $matches
+    );
+
+    return array_values(array_filter(array_map(
+        static fn (string $item): string => clean_string($item, 120),
+        $matches[0] ?? []
+    ), static fn (string $item): bool => workout_parser_is_circuit_item_fragment($item)));
+}
+
+function workout_parser_build_circuit_block(string $rounds, array $items, string $rest = ''): string
+{
+    $restPart = $rest !== '' ? ' rest ' . $rest : '';
+    return 'Circuito x' . $rounds . $restPart . ': ' . implode(' | ', array_map(static fn (string $item): string => trim($item), $items));
 }
 
 function workout_parser_is_leading_reps_exercise(string $part): bool
@@ -206,16 +398,16 @@ function workout_parser_parse_exercise_line(string $line): ?array
     $seriesMatchEnd = null;
     $nameOverride = null;
 
-    if (preg_match('/^Circuito\s+[xX]\s*(\d+)\s*:\s*(.+)$/u', $original, $match)) {
+    if (preg_match('/^Circuito\s+[xX]\s*(\d+)(?:\s+rest\s+([^:]+))?\s*:\s*(.+)$/u', $original, $match)) {
         return [
             'type' => 'circuit',
             'name' => 'Circuito',
             'rounds' => (int) $match[1],
-            'exercises' => workout_parser_parse_circuit_items($match[2]),
+            'exercises' => workout_parser_parse_circuit_items($match[3]),
             'sets' => '',
             'reps' => '',
             'weight' => '',
-            'rest' => '',
+            'rest' => clean_string($match[2] ?? '', 80),
             'notes' => '',
         ];
     }
@@ -380,6 +572,21 @@ function workout_parser_parse_circuit_items(string $items): array
     $parsed = [];
 
     foreach ($rows as $row) {
+        if (preg_match('/^(\d+)\s*(km|m|metri|metro)\s+(?:di\s+)?(.+)$/iu', $row, $match)) {
+            $name = clean_string($match[3], 160);
+            if ($name === '') {
+                continue;
+            }
+
+            $unit = strtolower($match[2]);
+            $unit = in_array($unit, ['metri', 'metro'], true) ? 'm' : $unit;
+            $parsed[] = [
+                'name' => $name,
+                'reps' => $match[1] . ' ' . $unit,
+            ];
+            continue;
+        }
+
         if (!preg_match('/^(\d+)\s+(.+)$/u', $row, $match)) {
             continue;
         }

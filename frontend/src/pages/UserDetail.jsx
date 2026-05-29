@@ -105,6 +105,13 @@ export function UserDetail({ id, currentUser, onUserUpdate, notify }) {
         </div>
       </div>
 
+      <div className="user-detail-actions row">
+        <div className="user-detail-badges">
+          <span className={`badge role-badge`}>{roleLabels[data.user.role] || data.user.role}</span>
+          <span className={`badge status-${data.user.status}`}>{statusLabels[data.user.status] || data.user.status}</span>
+        </div>
+      </div>
+
       <section className="user-info-card" aria-label="Informazioni utente">
         <div className="user-info-main">
           <span className="user-info-avatar" aria-hidden="true">{getInitials(data.user.full_name)}</span>
@@ -141,21 +148,33 @@ export function UserDetail({ id, currentUser, onUserUpdate, notify }) {
 
       {canEditProfile && (
         <form className="panel-form" onSubmit={save}>
-          <input value={form.full_name} onChange={(event) => setForm({ ...form, full_name: event.target.value })} required />
-          <input type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} required />
+          <label>
+            <span>Nome completo</span>
+            <input value={form.full_name} onChange={(event) => setForm({ ...form, full_name: event.target.value })} required />
+          </label>
+          <label>
+            <span>Email</span>
+            <input type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} required />
+          </label>
           {isCurrentAdmin ? (
             <>
-              <select value={form.role} onChange={(event) => setForm({ ...form, role: event.target.value })}>
-                <option value="atleta">Atleta</option>
-                <option value="autonomo">Autonomo</option>
-                <option value="istruttore">Istruttore</option>
-                <option value="admin">Admin</option>
-              </select>
-              <select value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value })}>
-                <option value="pending">Pending</option>
-                <option value="active">Active</option>
-                <option value="disabled">Disabled</option>
-              </select>
+              <label>
+                <span>Ruolo</span>
+                <select value={form.role} onChange={(event) => setForm({ ...form, role: event.target.value })}>
+                  <option value="atleta">Atleta</option>
+                  <option value="autonomo">Autonomo</option>
+                  <option value="istruttore">Istruttore</option>
+                  <option value="admin">Admin</option>
+                </select>
+              </label>
+              <label>
+                <span>Status</span>
+                <select value={form.status} onChange={(event) => setForm({ ...form, status: event.target.value })}>
+                  <option value="pending">Pending</option>
+                  <option value="active">Active</option>
+                  <option value="disabled">Disabled</option>
+                </select>
+              </label>
             </>
           ) : null}
           <button className="primary">Salva utente</button>
@@ -174,7 +193,12 @@ export function UserDetail({ id, currentUser, onUserUpdate, notify }) {
           <h3>Schede assegnate</h3>
           <div className="list">
             {data.plans.map((plan) => <button key={plan.id} className="list-row" onClick={() => go(`/plan?id=${plan.id}`)}><strong>{plan.name}</strong><span>{new Date(plan.created_at).toLocaleDateString('it-IT')}</span></button>)}
-            {data.plans.length === 0 && <p className="empty">Nessuna scheda assegnata.</p>}
+            {data.plans.length === 0 && (
+              <div className="empty empty-card">
+                <strong>Nessuna scheda assegnata</strong>
+                <span>Il profilo non ha ancora programmi collegati.</span>
+              </div>
+            )}
           </div>
         </>
       )}

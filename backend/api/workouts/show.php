@@ -152,7 +152,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'PUT') {
                 $blockType === 'exercise' ? clean_string($exercise['sets'] ?? '', 40) : '',
                 $blockType === 'exercise' ? clean_string($exercise['reps'] ?? '', 40) : '',
                 $blockType === 'exercise' ? clean_string($exercise['weight'] ?? '', 40) : '',
-                $blockType === 'exercise' ? clean_string($exercise['rest'] ?? '', 40) : '',
+                clean_string($exercise['rest'] ?? '', 40),
                 $blockType === 'exercise' ? clean_text($exercise['notes'] ?? '', 1000) : '',
                 $blockType === 'circuit' ? $circuitRounds : null,
                 $blockType === 'circuit' ? json_encode($circuitExercises, JSON_UNESCAPED_UNICODE) : null,
@@ -192,7 +192,7 @@ function normalize_exercise_for_response(array $exercise): array
         $exercise['sets'] = '';
         $exercise['reps'] = '';
         $exercise['weight'] = '';
-        $exercise['rest'] = '';
+        $exercise['rest'] = clean_string($exercise['rest'] ?? '', 40);
         $exercise['notes'] = '';
     } else {
         $exercise['rounds'] = '';

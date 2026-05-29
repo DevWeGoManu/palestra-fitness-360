@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, CheckCircle2, FileText, Wand2 } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { AlertTriangle, CheckCircle2, FileText, Info, Wand2 } from 'lucide-react';
 import { api } from '../api.js';
 import { Loading } from '../components/Loading.jsx';
 import { canEditWorkouts, canManage, go } from '../utils/router.js';
 
 const emptyExercise = { type: 'exercise', name: '', sets: '', reps: '', weight: '', rest: '', notes: '', order_index: 1 };
+const SKIP_APPEND_CONFIRM_KEY = 'athleo.skipAppendWorkoutConfirm';
 
 export function PlanEditor({ id, user, notify, editMode = false }) {
   const [plan, setPlan] = useState(null);
@@ -89,6 +90,25 @@ export function PlanEditor({ id, user, notify, editMode = false }) {
     }));
   }
 
+  function getParserActionState() {
+    const parsedDays = getEffectiveParserDays();
+    const replaceableDays = parserHasExplicitDays
+      ? parsedDays
+          .map((parsedDay) => plan.days.find((day) => Number(day.day_number) === Number(parsedDay.day_number)))
+          .filter((day) => day?.exercises?.length > 0)
+      : [];
+    const updateMatches = countParserUpdateMatches(parsedDays, plan.days);
+
+    return {
+      replaceableDays,
+      replaceLabel: replaceableDays.length === 1
+        ? `Sostituisci ${formatDayTitle(replaceableDays[0])}`
+        : `Sostituisci ${replaceableDays.length} giorni`,
+      updateMatches,
+      updateLabel: `Aggiorna ${updateMatches} ${updateMatches === 1 ? 'blocco' : 'blocchi'}`
+    };
+  }
+
   function updateDay(dayIndex, patch) {
     setPlan({ ...plan, days: plan.days.map((day, index) => index === dayIndex ? { ...day, ...patch } : day) });
   }
@@ -100,12 +120,6 @@ export function PlanEditor({ id, user, notify, editMode = false }) {
       return { ...day, exercises };
     });
     setPlan({ ...plan, days });
-  }
-
-  function duplicateExercise(dayIndex, exerciseIndex) {
-    const day = plan.days[dayIndex];
-    const copy = { ...day.exercises[exerciseIndex], id: undefined, order_index: day.exercises.length + 1 };
-    updateDay(dayIndex, { exercises: [...day.exercises, copy] });
   }
 
   function removeExercise(dayIndex, exerciseIndex) {
@@ -260,16 +274,26 @@ export function PlanEditor({ id, user, notify, editMode = false }) {
     const parsedDays = getEffectiveParserDays();
     if (!parsedDays.length) return;
 
+    if (mode === 'append' && shouldSkipAppendConfirm()) {
+      applyParserDays(parsedDays, mode);
+      return;
+    }
+
     const isReplace = mode === 'replace';
     const isUpdate = mode === 'update';
     const action = isReplace ? 'sostituire' : isUpdate ? 'aggiornare dentro' : 'aggiungere a';
     const dayNames = parsedDays.map((day) => formatDayTitle(day)).join(', ');
+    const appendMessage = parsedDays.length === 1
+      ? `Gli esercizi verranno aggiunti a ${formatDayTitle(parsedDays[0])}.\nRicorda di salvare la scheda per rendere permanenti le modifiche.`
+      : `Gli esercizi verranno aggiunti a ${dayNames}.\nRicorda di salvare la scheda per rendere permanenti le modifiche.`;
 
     requestConfirmation({
       title: isReplace ? 'Sostituire i day trovati?' : isUpdate ? 'Aggiornare i blocchi corrispondenti?' : 'Aggiungere alla scheda?',
-      message: `Vuoi ${action} ${dayNames} nella scheda corrente? Dovrai comunque premere Salva per rendere definitive le modifiche.`,
+      message: mode === 'append' ? appendMessage : `Vuoi ${action} ${dayNames} nella scheda corrente? Dovrai comunque premere Salva per rendere definitive le modifiche.`,
       confirmLabel: isReplace ? 'Sostituisci' : isUpdate ? 'Aggiorna' : 'Aggiungi',
       tone: isReplace ? 'danger' : 'default',
+      preferenceKey: mode === 'append' ? SKIP_APPEND_CONFIRM_KEY : '',
+      preferenceLabel: mode === 'append' ? 'Non mostrare più questo avviso' : '',
       onConfirm: () => applyParserDays(parsedDays, mode)
     });
   }
@@ -380,28 +404,32 @@ export function PlanEditor({ id, user, notify, editMode = false }) {
     setConfirmDialog(options);
   }
 
-  async function confirmAction() {
+  async function confirmAction(options = {}) {
     const action = confirmDialog?.onConfirm;
+    if (confirmDialog?.preferenceKey && options.rememberPreference) {
+      localStorage.setItem(confirmDialog.preferenceKey, '1');
+    }
     setConfirmDialog(null);
     await action?.();
   }
 
   return (
     <section className="page print-scope">
-      <div className="page-title row">
-        <div>
-          <h2>{showManualEditor ? <input className="title-input" value={plan.name} onChange={(e) => setPlan({ ...plan, name: e.target.value })} /> : plan.name}</h2>
-          {normalizeExerciseName(plan.name) !== normalizeExerciseName(plan.assigned_user_name) && <p>{plan.assigned_user_name}</p>}
+      <div className="plan-editor-flow">
+        <div className="page-title row">
+          <div>
+            <h2>{showManualEditor ? <input className="title-input" value={plan.name} onChange={(e) => setPlan({ ...plan, name: e.target.value })} /> : plan.name}</h2>
+            {normalizeExerciseName(plan.name) !== normalizeExerciseName(plan.assigned_user_name) && <p>{plan.assigned_user_name}</p>}
+          </div>
         </div>
-      </div>
-      {editable && (
-        <>
-          {showManualEditor && canAssignAthletes && (
-            <select className="wide-select" value={plan.assigned_user_id} onChange={(e) => setPlan({ ...plan, assigned_user_id: e.target.value })}>
-              {athletes.map((item) => <option key={item.id} value={item.id}>{item.full_name}</option>)}
-            </select>
-          )}
-          <section className="parser-panel no-print" aria-label="Workout Parser">
+        {editable && (
+          <>
+            {showManualEditor && canAssignAthletes && (
+              <select className="wide-select" value={plan.assigned_user_id} onChange={(e) => setPlan({ ...plan, assigned_user_id: e.target.value })}>
+                {athletes.map((item) => <option key={item.id} value={item.id}>{item.full_name}</option>)}
+              </select>
+            )}
+            <section className="parser-panel no-print" aria-label="Workout Parser">
             <div className="parser-heading">
               <div>
                 <h3><Wand2 size={19} /> Workout Parser</h3>
@@ -452,6 +480,11 @@ export function PlanEditor({ id, user, notify, editMode = false }) {
                 <div>
                   <strong>La preview della scheda apparirà qui dopo la generazione</strong>
                   <span>Inserisci il testo dell'allenamento, scegli il giorno e genera una preview prima di salvare.</span>
+                  <div className="parser-empty-examples" aria-label="Mini esempi parser">
+                    <code>Squat 3x10 con 80kg</code>
+                    <code>1 Mu / 12 Bar Dip / x4</code>
+                    <code>Giorno 2: Panca 4x8</code>
+                  </div>
                 </div>
               </div>
             )}
@@ -498,22 +531,21 @@ export function PlanEditor({ id, user, notify, editMode = false }) {
                     </article>
                   );
                 })}
-                <div className="parser-actions">
-                  <button className="ghost" type="button" onClick={() => applyParserPreview('append')}>Aggiungi alla scheda</button>
-                  <button className="ghost danger" type="button" onClick={() => applyParserPreview('replace')}>Sostituisci day trovati</button>
-                  {parserEditTarget ? (
-                    <button className="primary" type="button" onClick={applyParserEditTargetPreview}>Aggiorna questo blocco</button>
-                  ) : (
-                    <button className="ghost" type="button" onClick={() => applyParserPreview('update')}>Aggiorna blocchi corrispondenti</button>
-                  )}
-                </div>
+                <ParserActions
+                  actionState={getParserActionState()}
+                  isTargetEditing={Boolean(parserEditTarget)}
+                  onAppend={() => applyParserPreview('append')}
+                  onReplace={() => applyParserPreview('replace')}
+                  onUpdate={() => applyParserPreview('update')}
+                  onTargetUpdate={applyParserEditTargetPreview}
+                />
               </div>
             )}
-          </section>
-        </>
-      )}
-      {visibleDays.length > 1 && (
-        <div className="day-tabs no-print" role="tablist" aria-label="Giorni allenamento">
+            </section>
+          </>
+        )}
+        {visibleDays.length > 1 && (
+          <div className="day-tabs no-print" role="tablist" aria-label="Giorni allenamento">
           {visibleDays.map((day) => (
             <button
               key={day.id}
@@ -526,13 +558,14 @@ export function PlanEditor({ id, user, notify, editMode = false }) {
               ].filter(Boolean).join(' ')}
               onClick={() => setActiveDayId(day.id)}
             >
-              {dayLabel(day.day_number)}
+              <span>{dayLabel(day.day_number)}</span>
+              <small>{day.exercises.length} es.</small>
             </button>
           ))}
-        </div>
-      )}
-      {!editable && activeDay && (
-        <AthleteWorkoutGuide
+          </div>
+        )}
+        {!editable && activeDay && (
+          <AthleteWorkoutGuide
           activeDay={activeDay}
           completedDayId={completedDayId}
           position={activeDayPosition}
@@ -545,9 +578,9 @@ export function PlanEditor({ id, user, notify, editMode = false }) {
             const next = visibleDays[Math.min(visibleDays.length - 1, activeDayPosition + 1)];
             if (next) setActiveDayId(next.id);
           }}
-        />
-      )}
-      <div className="days">
+          />
+        )}
+        <div className="days">
         {daysToRender.map((day) => {
           const dayIndex = plan.days.findIndex((item) => Number(item.id) === Number(day.id));
           return (
@@ -560,12 +593,12 @@ export function PlanEditor({ id, user, notify, editMode = false }) {
                 </div>
                 <div className="current-plan-toolbar">
                   <div className="editor-bottom-copy">
-                    <strong>{manualEditing || dirty ? 'Modifiche non salvate' : 'Scheda salvata'}</strong>
-                    <span>{manualEditing || dirty ? 'Salva le modifiche quando hai finito.' : 'Puoi modificare manualmente la scheda corrente.'}</span>
+                    <strong className={manualEditing || dirty ? 'status-unsaved' : 'status-saved'}>{manualEditing || dirty ? 'Non salvata' : 'Salvata'}</strong>
+                    <span>{manualEditing || dirty ? 'Modifiche da salvare' : 'Scheda aggiornata'}</span>
                   </div>
                   {manualEditing && <button className="ghost" onClick={cancelManualEditing}>Annulla</button>}
                   {!manualEditing && !dirty && <button className="ghost" onClick={startManualEditing}>Modifica</button>}
-                  <button className="ghost" type="button" onClick={() => copyDayToParser(day)} disabled={day.exercises.length === 0}>Copia nel parser</button>
+                  {!manualEditing && <button className="ghost" type="button" onClick={() => copyDayToParser(day)} disabled={day.exercises.length === 0}>Copia nel parser</button>}
                   {(manualEditing || dirty) && <button className="primary" onClick={save}>Salva</button>}
                 </div>
               </div>
@@ -587,8 +620,6 @@ export function PlanEditor({ id, user, notify, editMode = false }) {
                     onAthleteNoteBlur={!editable ? () => saveAthleteNote(exercise) : undefined}
                     actions={showManualEditor ? (
                       <div className="exercise-actions no-print">
-                        <button className="ghost" onClick={() => copyExerciseToParser(exercise, day, dayIndex, exerciseIndex)}>Modifica nel parser</button>
-                        <button className="ghost" onClick={() => duplicateExercise(dayIndex, exerciseIndex)}>Duplica</button>
                         <button className="ghost danger" onClick={() => removeExercise(dayIndex, exerciseIndex)}>Rimuovi</button>
                       </div>
                     ) : editable ? (
@@ -608,7 +639,7 @@ export function PlanEditor({ id, user, notify, editMode = false }) {
                       ))}
                     </div>
                     <input className="exercise-notes-input" placeholder={fieldLabel('notes')} value={exercise.notes || ''} onChange={(e) => updateExercise(dayIndex, exerciseIndex, { notes: e.target.value })} />
-                    <div className="exercise-actions no-print"><button className="ghost" onClick={() => copyExerciseToParser(exercise, day, dayIndex, exerciseIndex)}>Modifica nel parser</button><button className="ghost" onClick={() => duplicateExercise(dayIndex, exerciseIndex)}>Duplica</button><button className="ghost danger" onClick={() => removeExercise(dayIndex, exerciseIndex)}>Rimuovi</button></div>
+                    <div className="exercise-actions no-print"><button className="ghost danger" onClick={() => removeExercise(dayIndex, exerciseIndex)}>Rimuovi</button></div>
                   </div>
                 ) : editable ? (
                   <ReadOnlyExercise
@@ -648,9 +679,9 @@ export function PlanEditor({ id, user, notify, editMode = false }) {
           </article>
           );
         })}
-      </div>
-      {editable && (manualEditing || dirty) && (
-        <div className="editor-bottom-actions no-print">
+        </div>
+        {editable && (manualEditing || dirty) && (
+          <div className="editor-bottom-actions no-print">
           {(manualEditing || dirty) && (
             <div className="editor-bottom-left">
               {daysToRender[0] && (
@@ -664,35 +695,109 @@ export function PlanEditor({ id, user, notify, editMode = false }) {
               <button className="ghost danger" onClick={deletePlan}>Elimina programma</button>
             </div>
           )}
-        </div>
-      )}
+          </div>
+        )}
+      </div>
       <ConfirmDialog dialog={confirmDialog} onCancel={() => setConfirmDialog(null)} onConfirm={confirmAction} />
     </section>
   );
 }
 
 function ConfirmDialog({ dialog, onCancel, onConfirm }) {
+  const cardRef = useRef(null);
+  const [rememberPreference, setRememberPreference] = useState(false);
+
+  useEffect(() => {
+    if (!dialog) return undefined;
+    setRememberPreference(false);
+
+    const card = cardRef.current;
+    const focusable = getFocusableElements(card);
+    focusable[0]?.focus();
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        onCancel();
+        return;
+      }
+
+      if (event.key !== 'Tab' || focusable.length === 0) return;
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [dialog, onCancel]);
+
   if (!dialog) return null;
+
+  const Icon = dialog.tone === 'danger' ? AlertTriangle : Info;
 
   return (
     <div className="confirm-overlay" role="presentation" onMouseDown={onCancel}>
-      <div className="confirm-card" role="dialog" aria-modal="true" aria-labelledby="confirm-title" onMouseDown={(event) => event.stopPropagation()}>
-        <div className={['confirm-icon', dialog.tone === 'danger' ? 'danger' : ''].filter(Boolean).join(' ')}>
-          <AlertTriangle size={22} />
+      <div className="confirm-card" role="dialog" aria-modal="true" aria-labelledby="confirm-title" ref={cardRef} onMouseDown={(event) => event.stopPropagation()}>
+        <div className={['confirm-icon', dialog.tone === 'danger' ? 'danger' : 'info'].filter(Boolean).join(' ')}>
+          <Icon size={22} />
         </div>
         <div className="confirm-content">
           <h3 id="confirm-title">{dialog.title}</h3>
           <p>{dialog.message}</p>
+          {dialog.preferenceLabel && (
+            <label className="confirm-preference">
+              <input
+                type="checkbox"
+                checked={rememberPreference}
+                onChange={(event) => setRememberPreference(event.target.checked)}
+              />
+              <span>{dialog.preferenceLabel}</span>
+            </label>
+          )}
         </div>
         <div className="confirm-actions">
           <button className="ghost" type="button" onClick={onCancel}>Annulla</button>
-          <button className={dialog.tone === 'danger' ? 'danger-solid' : 'primary'} type="button" onClick={onConfirm}>
+          <button className={dialog.tone === 'danger' ? 'danger-solid' : 'primary'} type="button" onClick={() => onConfirm({ rememberPreference })}>
             {dialog.confirmLabel || 'Conferma'}
           </button>
         </div>
       </div>
     </div>
   );
+}
+
+function getFocusableElements(container) {
+  if (!container) return [];
+  return Array.from(container.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'))
+    .filter((element) => !element.disabled && element.getAttribute('aria-hidden') !== 'true');
+}
+
+function ParserActions({ actionState, isTargetEditing, onAppend, onReplace, onUpdate, onTargetUpdate }) {
+  return (
+    <div className="parser-actions">
+      <button className="ghost" type="button" onClick={onAppend}>Aggiungi alla scheda</button>
+      {actionState.replaceableDays.length > 0 && (
+        <button className="ghost danger" type="button" onClick={onReplace}>{actionState.replaceLabel}</button>
+      )}
+      {isTargetEditing ? (
+        <button className="primary" type="button" onClick={onTargetUpdate}>Aggiorna questo blocco</button>
+      ) : actionState.updateMatches > 0 && (
+        <button className="ghost" type="button" onClick={onUpdate}>{actionState.updateLabel}</button>
+      )}
+    </div>
+  );
+}
+
+function shouldSkipAppendConfirm() {
+  return localStorage.getItem(SKIP_APPEND_CONFIRM_KEY) === '1';
 }
 
 function AthleteWorkoutGuide({ activeDay, completedDayId, position, total, onPrevious, onNext }) {
@@ -851,6 +956,24 @@ function findParserEditTargetBlockIndex(exercises = [], target) {
   return target.blockIndex >= 0 && target.blockIndex < exercises.length ? target.blockIndex : -1;
 }
 
+function countParserUpdateMatches(parsedDays = [], currentDays = []) {
+  return parsedDays.reduce((total, parsedDay) => {
+    const currentDay = currentDays.find((day) => Number(day.day_number) === Number(parsedDay.day_number));
+    if (!currentDay?.exercises?.length) return total;
+
+    const matchedIndexes = new Set();
+    const parsedExercises = (parsedDay.exercises || []).flatMap((exercise) => expandParsedExercise(exercise));
+    const dayMatches = parsedExercises.reduce((count, parsedExercise) => {
+      const matchIndex = findMatchingExerciseIndex(currentDay.exercises, parsedExercise, matchedIndexes);
+      if (matchIndex < 0) return count;
+      matchedIndexes.add(matchIndex);
+      return count + 1;
+    }, 0);
+
+    return total + dayMatches;
+  }, 0);
+}
+
 function applyParsedExercisesToDay(currentExercises = [], parsedExercises = [], mode) {
   if (mode === 'replace') return parsedExercises;
 
@@ -944,6 +1067,15 @@ function numericSortValue(value) {
   return Number.isFinite(number) ? number : Number.MAX_SAFE_INTEGER;
 }
 
+function formatExerciseInlineMeta(exercise) {
+  return [
+    exercise.sets ? `${exercise.sets} serie` : '',
+    exercise.reps ? `${exercise.reps} reps` : '',
+    exercise.weight || '',
+    exercise.rest ? `rec. ${exercise.rest}` : ''
+  ].filter(Boolean).join(' · ');
+}
+
 function CoachExerciseValues({ exercise }) {
   if (isCircuitBlock(exercise)) {
     return <CircuitSummary block={exercise} />;
@@ -965,12 +1097,11 @@ function CoachExerciseValues({ exercise }) {
     );
   }
 
+  const inlineMeta = formatExerciseInlineMeta(exercise);
+
   return (
-    <div className="exercise-values">
-      {exercise.sets && <span><small>Serie</small>{exercise.sets}</span>}
-      {exercise.reps && <span><small>Ripetizioni</small>{exercise.reps}</span>}
-      {exercise.weight && <span><small>Peso</small>{exercise.weight}</span>}
-      {exercise.rest && <span><small>Recupero</small>{exercise.rest}</span>}
+    <div className="exercise-values compact">
+      {inlineMeta && <span className="exercise-inline-meta">{inlineMeta}</span>}
       {exercise.notes && <span className="exercise-note"><small>Note coach</small>{exercise.notes}</span>}
     </div>
   );
@@ -1008,6 +1139,7 @@ function CircuitBlockCard({ block, actions = null, athleteNote = '', onAthleteNo
 
 function CircuitSummary({ block }) {
   const items = Array.isArray(block.exercises) ? block.exercises : [];
+  const rest = formatParserValue(block.rest);
 
   return (
     <div className="circuit-items">
@@ -1017,6 +1149,7 @@ function CircuitSummary({ block }) {
           <strong>{item.name}</strong>
         </div>
       ))}
+      {rest && <div className="circuit-rest">Recupero tra i giri: {rest}</div>}
     </div>
   );
 }

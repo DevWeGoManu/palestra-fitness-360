@@ -29,7 +29,12 @@ export function Dashboard({ user }) {
                 <span>{new Date(session.completed_at).toLocaleString('it-IT')}</span>
               </div>
             ))}
-            {(stats?.recent_sessions || []).length === 0 && <p className="empty">Nessun allenamento completato.</p>}
+            {(stats?.recent_sessions || []).length === 0 && (
+              <div className="empty empty-card">
+                <strong>Nessun allenamento completato</strong>
+                <span>Non ci sono sessioni recenti da mostrare.</span>
+              </div>
+            )}
           </div>
         </>
       )}
